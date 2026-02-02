@@ -1,0 +1,55 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color: #f1f5f9;
+  background-color: #0f172a;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 🔥 IMPORTANT FIX */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+/* REMOVE center alignment behavior */
+body {
+  display: block;   /* was flex ❌ */
+}
+
+/* Optional smoother default text */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+}
+
+button {
+  font-family: inherit;
+}
+body.light {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.dark {
+  background: linear-gradient(135deg, #111827, #0f172a);
+  color: #f1f5f9;
+}
+
+.card-light {
+  background: white;
+  color: #0f172a;
+}
+
+.card-dark {
+  background: #1e293b;
+  color: white;
+}

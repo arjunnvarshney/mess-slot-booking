@@ -1,0 +1,11 @@
+/* Make app always full width */
+#root {
+  width: 100%;
+}
+
+/* Remove Vite demo logo/card styles */
+.logo,
+.card,
+.read-the-docs {
+  display: none;
+}
