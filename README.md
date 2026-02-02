@@ -35,6 +35,20 @@ A full-stack university mess management system that allows students to book meal
 6. Analytics dashboard shows meal statistics
 
 ---
+## 📸 Screenshots
+
+### Student Login
+![Student Login](screenshots/student-login.png)
+
+### Student Dashboard
+![Student Dashboard](screenshots/student-dashboard.png)
+
+### Student Meal QR
+![Student QR](screenshots/student-meal-qr.png)
+
+### Admin QR Scanner
+![Admin QR Scanner](screenshots/admin-qr-scanner.png)
+
 
 ##  Tech Stack
 
