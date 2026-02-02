@@ -81,12 +81,8 @@ http://localhost:5000/api
 
 ---
 
-## Admin APIs
-
 ### Register Admin  
-**POST** `/admin/register`  
-
-Create a new admin account.
+**POST** `/admin/register`
 
 **Request Body**
 ```json
@@ -94,35 +90,53 @@ Create a new admin account.
   "username": "admin",
   "password": "password123"
 }
-Success Response
+```
 
-{ "message": "Admin registered successfully" }
-Admin Login
-POST /admin/login
+**Success Response**
+```json
+{
+  "message": "Admin registered successfully"
+}
+```
+
+---
+
+### Admin Login  
+**POST** `/admin/login`
 
 Authenticates admin and returns a JWT token.
 
-Request Body
-
+**Request Body**
+```json
 {
   "username": "admin",
   "password": "password123"
 }
-Success Response
+```
 
+**Success Response**
+```json
 {
   "message": "Admin login successful",
   "token": "jwt_token_here"
 }
-Get Logged-in Admin
-GET /admin/me
+```
+
+---
+
+### Get Logged-in Admin  
+**GET** `/admin/me`  
 Requires Admin Token
 
-Headers
+**Headers**
+```json
+{
+  "Authorization": "Bearer <JWT_TOKEN>"
+}
+```
 
-Authorization: Bearer <token>
-Response
-
+**Success Response**
+```json
 {
   "message": "Admin authenticated",
   "admin": {
@@ -130,76 +144,7 @@ Response
     "username": "admin"
   }
 }
-Today’s Stats
-GET /admin/stats/today
-Requires Admin Token
-
-Returns today’s meal booking summary.
-
-Response
-
-{
-  "breakfast": 45,
-  "lunch": 120,
-  "dinner": 90,
-  "totalStudents": 180
-}
-Today’s Booking Report
-GET /admin/reports/today
-Requires Admin Token
-
-Returns full booking details for export.
-
-Daily Analytics
-GET /admin/analytics/daily?date=YYYY-MM-DD
-Requires Admin Token
-
-Returns booking vs consumption per meal.
-
-Weekly Analytics
-GET /admin/analytics/weekly
-Requires Admin Token
-
-Returns last 7 days booking statistics.
-
-Get All Bookings
-GET /admin/bookings
-Requires Admin Token
-
-Returns all student bookings with slot details.
-
-Student APIs
-Create Student
-POST /students/create
-
-Registers a new student.
-
-Request Body
-
-{
-  "rollNo": "E23CSEU1638",
-  "name": "Arjun",
-  "hostel": "A Block",
-  "password": "studentpass"
-}
-Success Response
-
-{ "message": "Student created successfully" }
- Get Student Profile
-GET /students/profile
- Requires Student Token
-
-Headers
-
-Authorization: Bearer <token>
-Returns logged-in student data.
-
-Authentication
-Protected routes require a JWT token in headers:
-
-Authorization: Bearer <your_token>
-Admin routes use adminAuth middleware
-Student routes use studentAuth middleware
+```
 
 
 
