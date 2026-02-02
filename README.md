@@ -29,10 +29,10 @@ A full-stack university mess management system that allows students to book meal
 
 1. Students log in using university email  
 2. Students book available meal slots
-3. Slot 
+3. Slot gets selected to the nearest slot available automatically for the selected meal
 4. Admin monitors bookings in real time  
 5. QR codes are used to verify entry  
-6. Analytics dashboard shows meal statistics  
+6. Analytics dashboard shows meal statistics
 
 ---
 
