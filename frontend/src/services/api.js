@@ -7,8 +7,10 @@ const api = axios.create({
 // Attach token automatically
 api.interceptors.request.use((config) => {
   const adminToken = localStorage.getItem("adminToken");
-  if (adminToken) {
-    config.headers.Authorization = `Bearer ${adminToken}`;
+  const studentToken = localStorage.getItem("studentToken");
+  const token = adminToken || studentToken;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

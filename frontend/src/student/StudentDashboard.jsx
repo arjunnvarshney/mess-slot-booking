@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-
-const API = "http://localhost:5000/api";
+import api from "../services/api";
 
 export default function StudentDashboard({ onLogout }) {
   const [student, setStudent] = useState(null);
@@ -10,17 +8,11 @@ export default function StudentDashboard({ onLogout }) {
   const [message, setMessage] = useState("");
   const [myBookings, setMyBookings] = useState([]);
 
-  const token = localStorage.getItem("studentToken");
-
-  const authHeader = {
-    headers: { Authorization: `Bearer ${token}` }
-  };
-
   /* ================= LOAD PROFILE + BOOKINGS ================= */
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get(`${API}/students/profile`, authHeader);
+        const res = await api.get("/students/profile");
         setStudent(res.data);
       } catch {
         setMessage("Session expired. Please login again.");
@@ -29,7 +21,7 @@ export default function StudentDashboard({ onLogout }) {
 
     const fetchBookings = async () => {
       try {
-        const res = await axios.get(`${API}/bookings/my`, authHeader);
+        const res = await api.get("/bookings/my");
         setMyBookings(res.data);
       } catch (err) {
         console.log(err);
@@ -43,11 +35,7 @@ export default function StudentDashboard({ onLogout }) {
   /* ================= BOOK MEAL ================= */
   const bookMeal = async (mealType) => {
     try {
-      const res = await axios.post(
-        `${API}/bookings/create`,
-        { mealType },
-        authHeader
-      );
+      const res = await api.post("/bookings/create", { mealType });
 
       setBooking(res.data.booking);
       setQrCode(res.data.qrCode);

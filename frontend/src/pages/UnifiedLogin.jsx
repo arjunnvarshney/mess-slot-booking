@@ -2,10 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
-// Import images correctly for Vite
-import bennettLogo from "../assets/bennett-logo.png";
-import bgImage from "../assets/bennett-bg.jpg";
-
 export default function UnifiedLogin() {
   const navigate = useNavigate();
 
@@ -38,11 +34,12 @@ export default function UnifiedLogin() {
   };
 
   return (
-    <div style={{ ...styles.page, backgroundImage: `url(${bgImage})` }}>
+    <div style={styles.page}>
       <div style={styles.overlay}></div>
 
       <div style={styles.card}>
-        <img src={bennettLogo} alt="Bennett Logo" style={styles.logo} />
+        {/* Use PUBLIC folder images */}
+        <img src="/bennett-logo.png" alt="Bennett Logo" style={styles.logo} />
 
         <h2 style={{ marginBottom: "5px" }}>Bennett University</h2>
         <p style={{ opacity: 0.7 }}>Student Login</p>
@@ -89,6 +86,7 @@ export default function UnifiedLogin() {
 const styles = {
   page: {
     minHeight: "100vh",
+    backgroundImage: "url('/bennett-bg.jpg')", // PUBLIC image
     backgroundSize: "cover",
     backgroundPosition: "center",
     display: "flex",
