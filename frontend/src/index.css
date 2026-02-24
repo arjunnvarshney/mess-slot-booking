@@ -7,4 +7,15 @@
 
 body {
   margin: 0;
+  transition: background 0.3s, color 0.3s;
+}
+
+body.light {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.dark {
+  background: #0f172a;
+  color: #f1f5f9;
 }

@@ -14,8 +14,12 @@ export default function StudentDashboard({ onLogout }) {
       try {
         const res = await api.get("/students/profile");
         setStudent(res.data);
-      } catch {
-        setMessage("Session expired. Please login again.");
+      } catch (err) {
+        console.error("Dashboard profile fetch error:", err.response?.data || err.message);
+        setMessage("Session expired or invalid. Redirecting to login...");
+        setTimeout(() => {
+          handleLogout();
+        }, 3000);
       }
     };
 
@@ -24,7 +28,7 @@ export default function StudentDashboard({ onLogout }) {
         const res = await api.get("/bookings/my");
         setMyBookings(res.data);
       } catch (err) {
-        console.log(err);
+        console.error("Dashboard bookings fetch error:", err);
       }
     };
 
@@ -46,7 +50,16 @@ export default function StudentDashboard({ onLogout }) {
     }
   };
 
-  if (!student) return <p style={{ padding: "40px" }}>Loading...</p>;
+  const handleLogout = () => {
+    localStorage.removeItem("studentToken");
+    window.location.href = "/"; // Force reload to clear state and redirect
+  };
+
+  if (!student) return (
+    <div style={styles.page}>
+      <p style={{ padding: "40px" }}>{message || "Loading Profile..."}</p>
+    </div>
+  );
 
   return (
     <div style={styles.page}>
@@ -57,7 +70,7 @@ export default function StudentDashboard({ onLogout }) {
         <p><b>Hostel:</b> {student.hostel}</p>
         <p><b>Floor:</b> {student.floor}</p>
 
-        <button onClick={onLogout} style={styles.logoutBtn}>Logout</button>
+        <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
       </div>
 
       {/* BOOK MEAL CARD */}

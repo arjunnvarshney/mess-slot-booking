@@ -9,12 +9,17 @@ export default function UnifiedLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const [loading, setLoading] = useState(false);
+
   const handleStudentLogin = async (e) => {
     e.preventDefault();
+    console.log("Student Login Attempted:", email);
     setError("");
+    setLoading(true);
 
     if (!email.endsWith("@bennett.edu.in")) {
       setError("Only @bennett.edu.in email allowed");
+      setLoading(false);
       return;
     }
 
@@ -24,12 +29,16 @@ export default function UnifiedLogin() {
         password
       });
 
+      console.log("Login Success:", res.data);
+      localStorage.removeItem("adminToken"); // Clear admin token if exists
       localStorage.setItem("studentToken", res.data.token);
       navigate("/student/dashboard");
 
     } catch (err) {
-      console.error("Login error:", err.response?.data || err.message);
-      setError("Invalid student credentials");
+      console.error("Login error details:", err.response?.data || err.message);
+      setError(err.response?.data?.error || "Invalid student credentials");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,8 +73,12 @@ export default function UnifiedLogin() {
 
           {error && <p style={styles.error}>{error}</p>}
 
-          <button style={styles.loginBtn} type="submit">
-            Login as Student
+          <button
+            style={{ ...styles.loginBtn, opacity: loading ? 0.7 : 1 }}
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login as Student"}
           </button>
         </form>
 
