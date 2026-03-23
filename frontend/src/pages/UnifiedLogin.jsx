@@ -11,6 +11,11 @@ export default function UnifiedLogin() {
 
   const [loading, setLoading] = useState(false);
 
+  const handleDemoLogin = () => {
+    setEmail("DEMO123@bennett.edu.in");
+    setPassword("password123");
+  };
+
   const handleStudentLogin = async (e) => {
     e.preventDefault();
     console.log("Student Login Attempted:", email);
@@ -79,6 +84,14 @@ export default function UnifiedLogin() {
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login as Student"}
+          </button>
+
+          <button
+            type="button"
+            style={styles.demoBtn}
+            onClick={handleDemoLogin}
+          >
+            🧑‍🎓 1-Click Demo Student
           </button>
         </form>
 
@@ -161,5 +174,17 @@ const styles = {
     color: "#dc2626",
     fontSize: "13px",
     marginTop: "10px"
+  },
+  demoBtn: {
+    width: "100%",
+    marginTop: "12px",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "2px dashed #0f766e",
+    background: "#f0fdfa",
+    color: "#0f766e",
+    cursor: "pointer",
+    fontWeight: "600",
+    transition: "background 0.3s"
   }
 };

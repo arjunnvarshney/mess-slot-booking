@@ -10,6 +10,11 @@ export default function AdminLogin() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const handleDemoAdmin = () => {
+        setUsername("admin");
+        setPassword("admin123");
+    };
+
     const handleAdminLogin = async (e) => {
         e.preventDefault();
         setError("");
@@ -70,6 +75,14 @@ export default function AdminLogin() {
                         disabled={loading}
                     >
                         {loading ? "Logging in..." : "Login as Admin"}
+                    </button>
+
+                    <button
+                        type="button"
+                        style={styles.demoBtn}
+                        onClick={handleDemoAdmin}
+                    >
+                        👔 1-Click Demo Admin
                     </button>
                 </form>
 
@@ -154,5 +167,17 @@ const styles = {
         color: "#dc2626",
         fontSize: "13px",
         marginTop: "12px"
+    },
+    demoBtn: {
+        width: "100%",
+        marginTop: "12px",
+        padding: "10px",
+        borderRadius: "8px",
+        border: "2px dashed #1e293b",
+        background: "#f8fafc",
+        color: "#1e293b",
+        cursor: "pointer",
+        fontWeight: "600",
+        transition: "background 0.3s"
     }
 };
