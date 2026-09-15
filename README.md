@@ -1,6 +1,32 @@
 # Campus Mess Booking
 
-A single React application and Express/MongoDB API for Bennett University dining. Students can reserve breakfast, lunch, snacks and dinner, reopen QR passes, cancel or reschedule before the cutoff, and view history. Administrators can enroll/import students, manage daily capacity, reset accounts, verify entry, and export date-specific reports.
+![Campus Mess Booking](https://img.shields.io/badge/Bennett%20University-campus%20dining-0f766e)
+![Node.js](https://img.shields.io/badge/Node.js-22%2B-16a34a)
+![React](https://img.shields.io/badge/React-19-149eca)
+![MongoDB](https://img.shields.io/badge/MongoDB-replica%20set-47a248)
+
+A production-minded meal reservation system for Bennett University. Students reserve a dated meal slot and receive a recoverable QR pass; mess staff manage capacity and scan entry; administrators manage enrollment and reporting.
+
+The application is designed around the rules that matter at a busy mess: one active reservation per meal, no overbooking under concurrent requests, India Standard Time cutoffs, and auditable changes.
+
+## What it includes
+
+- Student booking for breakfast, lunch, snacks, and dinner with floor-aware availability.
+- Recoverable QR passes with owner-only access and one-time gate redemption.
+- Cancellation and atomic rescheduling before the 15-minute cutoff.
+- Admin enrollment, bulk import, floor/access management, dated slot inventory, and CSV reports.
+- Daily and seven-day analytics with reservation, consumption, and unique-student totals.
+- Responsive student and admin interfaces, dark mode, loading/retry states, and mobile-friendly navigation.
+- Transactional MongoDB services, versioned JWT sessions, password hashing, request validation, rate limits, audit logs, and safe error responses.
+
+## Quick links
+
+- [Local setup](#local-setup)
+- [Architecture](#architecture)
+- [Business rules](#business-rules)
+- [API overview](#api-overview)
+- [Testing](#testing)
+- [Production rollout](#production-rollout)
 
 ## Project layout
 
@@ -16,6 +42,20 @@ A single React application and Express/MongoDB API for Bennett University dining
 - `backend/scripts`: provisioning and read-only legacy audit.
 
 The duplicate application in `backend/admin-dashboard` is retired. Its earlier implementation remains in Git history.
+
+## Architecture
+
+```text
+React + Vite frontend
+        │ /api (same-origin proxy or HTTPS API URL)
+        ▼
+Express API ── authentication, validation, rate limits, audit logging
+        │
+        ▼
+MongoDB replica set ── indexed slots, bookings, users, and transactions
+```
+
+The backend is split into route, service, model, and domain layers. Booking state changes live in services so capacity updates and booking records commit together. The frontend is one Vite application with separate student and administrator routes.
 
 ## Requirements
 
@@ -33,6 +73,15 @@ Node.js 22.12+ and MongoDB Atlas or a MongoDB replica set. Standalone MongoDB is
 The student email local part maps to an administrator-enrolled roll number. This is **not university SSO or proof of email ownership**. Public student signup is disabled.
 
 No fixed demo password is shipped. Optional demo enrollment requires a separate non-production database, `ALLOW_DEMO_SEED=true`, and `DEMO_STUDENT_PASSWORD`; then run `node backend/scripts/seedDemoStudent.js`.
+
+## Configuration
+
+Copy the example files before starting:
+
+- [`backend/.env.example`](backend/.env.example) — MongoDB, JWT, CORS, and provisioning settings.
+- [`frontend/.env.example`](frontend/.env.example) — optional `VITE_API_URL` for a separately hosted API.
+
+Keep secrets in the server environment. Never put database credentials or `JWT_SECRET` in a `VITE_` variable or commit a `.env` file.
 
 ## Business rules
 
@@ -84,7 +133,7 @@ Base path: `/api`. Protected endpoints require `Authorization: Bearer <token>`.
 
 Paginated responses are `{ items, total, page, limit }`, with default limit 25 and maximum 100. Errors are `{ error, requestId }`. Invalid input returns 400, expired sessions 401, missing records 404, conflicts 409, and throttled requests 429.
 
-## Verification
+## Testing
 
 ```sh
 npm test --prefix backend
@@ -96,7 +145,13 @@ npm run format:check --prefix frontend
 
 Backend tests start and stop their own temporary MongoDB replica set. They never load `backend/.env` or connect to the configured application database. The first test/install run needs internet access to download a MongoDB binary; later runs use the cached binary. Tests cover concurrency, rollback, duplicate prevention, next-day capacity, QR ownership/recovery/redemption, cancellation/rescheduling, account resets, imports, CSV and timezone boundaries.
 
-CI runs these checks on push and pull request. Recheck dependency advisories with `npm audit` in both supported packages.
+CI runs these checks on every push and pull request. Recheck dependency advisories with `npm audit` in both supported packages.
+
+The integration suite starts an isolated MongoDB replica set, exercises concurrent booking and scanning, and shuts it down automatically. It does not connect to your configured database.
+
+## Production rollout
+
+For a new deployment, build `frontend/dist`, serve `index.html` for client routes, and proxy `/api` and `/health` to the API. Set `NODE_ENV=production`, exact `CORS_ORIGINS`, a random `JWT_SECRET` of at least 32 characters, and an Atlas or replica-set MongoDB URI. Use HTTPS, backups, monitoring, and a shared rate limiter before running multiple API instances.
 
 ## Existing installations: read before rollout
 
