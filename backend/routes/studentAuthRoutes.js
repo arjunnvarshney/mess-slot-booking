@@ -1,37 +1,18 @@
-const express = require("express");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
+const router = require("express").Router();
 const Student = require("../models/Student");
-
-const router = express.Router();
-
-/* ================= STUDENT LOGIN ================= */
-router.post("/auth/login", async (req, res) => {
-  try {
-    const { rollNo, password } = req.body;
-
-    const student = await Student.findOne({ rollNo });
-    if (!student) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const isMatch = await bcrypt.compare(password, student.password);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { studentId: student._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({ token });
-
-  } catch (err) {
-    console.error("Student login error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
+const { login } = require("../services/authService");
+const rateLimit = require("../middleware/rateLimit");
+router.post(
+  "/auth/login",
+  rateLimit({
+    keyFor: (req) =>
+      req.ip +
+      ":" +
+      (typeof req.body.rollNo === "string"
+        ? req.body.rollNo.trim().toUpperCase().slice(0, 100)
+        : "invalid"),
+  }),
+  async (req, res) =>
+    res.json({ token: await login(Student, "rollNo", req.body, "student") }),
+);
 module.exports = router;

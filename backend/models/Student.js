@@ -1,25 +1,33 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-
-const studentSchema = new mongoose.Schema({
-  rollNo: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  hostel: { type: String, required: true },
-  floor: { type: Number, default: 1 },
-  password: { type: String, required: true }
-}, { timestamps: true });
-
-/* 🔐 HASH PASSWORD BEFORE SAVE */
-studentSchema.pre("save", async function () {
+const { password } = require("../lib/domain");
+const schema = new mongoose.Schema(
+  {
+    rollNo: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      uppercase: true,
+      maxlength: 40,
+      match: /^[A-Z0-9-]+$/,
+    },
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    hostel: { type: String, required: true, trim: true, maxlength: 100 },
+    floor: { type: Number, required: true, enum: [1, 2] },
+    password: { type: String, required: true, select: false },
+    active: { type: Boolean, default: true },
+    authVersion: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+schema.pre("save", async function () {
   if (!this.isModified("password")) return;
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+  password(this.password);
+  this.password = await bcrypt.hash(this.password, 12);
+  if (!this.isNew) this.authVersion = (this.authVersion || 0) + 1;
 });
-
-/* 🔑 COMPARE PASSWORD METHOD */
-studentSchema.methods.comparePassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
+schema.methods.comparePassword = function (value) {
+  return bcrypt.compare(value, this.password);
 };
-
-module.exports = mongoose.models.Student || mongoose.model("Student", studentSchema);
+module.exports = mongoose.models.Student || mongoose.model("Student", schema);

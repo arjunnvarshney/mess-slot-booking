@@ -1,179 +1,255 @@
-import { useEffect, useState } from "react";
+import { useContext, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../services/api";
-
-export default function StudentDashboard({ onLogout }) {
-  const [student, setStudent] = useState(null);
-  const [booking, setBooking] = useState(null);
-  const [qrCode, setQrCode] = useState("");
-  const [message, setMessage] = useState("");
-  const [myBookings, setMyBookings] = useState([]);
-
-  /* ================= LOAD PROFILE + BOOKINGS ================= */
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("/students/profile");
-        setStudent(res.data);
-      } catch (err) {
-        console.error("Dashboard profile fetch error:", err.response?.data || err.message);
-        setMessage("Session expired or invalid. Redirecting to login...");
-        setTimeout(() => {
-          handleLogout();
-        }, 3000);
-      }
-    };
-
-    const fetchBookings = async () => {
-      try {
-        const res = await api.get("/bookings/my");
-        setMyBookings(res.data);
-      } catch (err) {
-        console.error("Dashboard bookings fetch error:", err);
-      }
-    };
-
-    fetchProfile();
-    fetchBookings();
-  }, []);
-
-  /* ================= BOOK MEAL ================= */
-  const bookMeal = async (mealType) => {
+import { logout } from "../services/session";
+import {
+  MEALS,
+  campusDate,
+  errorMessage,
+  bookingStatus,
+  canChange,
+  displayDate,
+} from "../services/utils";
+import { ThemeContext } from "../context/theme";
+import useResource from "../hooks/useResource";
+import ResourceState from "../components/ResourceState";
+import Pagination from "../components/Pagination";
+import QRPass from "../components/QRPass";
+export default function StudentDashboard() {
+  const profile = useResource("/students/profile", 60000);
+  const slots = useResource("/slots/today", 30000);
+  const todayBookings = useResource("/bookings/today", 30000);
+  const [page, setPage] = useState(1);
+  const history = useResource("/bookings/my?page=" + page, 30000);
+  const [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const [pass, setPass] = useState(null),
+    [selected, setSelected] = useState({});
+  const lock = useRef(false);
+  const { darkMode, toggleTheme } = useContext(ThemeContext);
+  async function action(url, body, openPass = false) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setMessage("");
+    setError("");
     try {
-      const res = await api.post("/bookings/create", { mealType });
-
-      setBooking(res.data.booking);
-      setQrCode(res.data.qrCode);
-      setMessage(res.data.message);
-
-    } catch (err) {
-      setMessage(err.response?.data?.error || "Booking failed");
+      const response = await api.post(url, body);
+      setMessage(response.data.message);
+      if (openPass) setPass(response.data.booking);
+      history.reload();
+      slots.reload();
+      todayBookings.reload();
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      lock.current = false;
+      setBusy(false);
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("studentToken");
-    window.location.href = "/"; // Force reload to clear state and redirect
-  };
-
-  if (!student) return (
-    <div style={styles.page}>
-      <p style={{ padding: "40px" }}>{message || "Loading Profile..."}</p>
-    </div>
-  );
-
+  }
   return (
-    <div style={styles.page}>
-      {/* PROFILE CARD */}
-      <div style={styles.card}>
-        <h2>Welcome, {student.name} 👋</h2>
-        <p><b>Roll No:</b> {student.rollNo}</p>
-        <p><b>Hostel:</b> {student.hostel}</p>
-        <p><b>Floor:</b> {student.floor}</p>
-
-        <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
-      </div>
-
-      {/* BOOK MEAL CARD */}
-      <div style={styles.card}>
-        <h3>🍽 Book Today's Meal</h3>
-
-        <div style={styles.btnRow}>
-          <button onClick={() => bookMeal("breakfast")} style={styles.btn}>Breakfast</button>
-          <button onClick={() => bookMeal("lunch")} style={styles.btn}>Lunch</button>
-          <button onClick={() => bookMeal("dinner")} style={styles.btn}>Dinner</button>
+    <div className="student-shell">
+      <header className="student-header">
+        <Link className="brand" to="/student/dashboard">
+          <span className="brand-mark">M</span>Campus Mess
+        </Link>
+        <div className="actions">
+          <button onClick={toggleTheme}>
+            {darkMode ? "Light theme" : "Dark theme"}
+          </button>
+          <Link to="/student/settings">Account</Link>
+          <button onClick={logout}>Log out</button>
         </div>
-
-        {message && <p style={{ marginTop: "10px" }}>{message}</p>}
-      </div>
-
-      {/* QR CARD */}
-      {booking && qrCode && (
-        <div style={styles.card}>
-          <h3>🎟 Your Mess Entry Pass</h3>
-          <p><b>Meal:</b> {booking.mealType}</p>
-          <p><b>Time:</b> {booking.slotTime}</p>
-          <p><b>Floor:</b> {booking.floor}</p>
-
-          <img src={qrCode} alt="QR Code" style={styles.qr} />
-          <p style={{ fontSize: "12px", opacity: 0.7 }}>
-            Show this QR at mess entrance
-          </p>
-        </div>
-      )}
-
-      {/* BOOKING HISTORY */}
-      {myBookings.length > 0 && (
-        <div style={styles.card}>
-          <h3>📜 My Bookings</h3>
-
-          {myBookings.map((b) => (
-            <div key={b._id} style={styles.bookingItem}>
-              <p><b>Meal:</b> {b.mealType}</p>
-              <p><b>Time:</b> {b.slot?.startTime} - {b.slot?.endTime}</p>
-              <p><b>Floor:</b> {b.floor}</p>
-              <p><b>Status:</b> {b.qrUsed ? "Used" : "Active"}</p>
-              <hr />
+      </header>
+      <main id="main-content" className="student-main">
+        <div className="page-heading">
+          <div>
+            <p className="eyebrow">Your dining day</p>
+            <h1>
+              {profile.data ? "Hello, " + profile.data.name : "Your meals"}
+            </h1>
+            <p className="muted">
+              {displayDate(campusDate())} · All times are India Standard Time
+            </p>
+          </div>
+          {profile.data && (
+            <div className="profile-chip">
+              {profile.data.rollNo}
+              <br />
+              {profile.data.hostel} · Floor {profile.data.floor}
             </div>
-          ))}
+          )}
         </div>
+        <ResourceState {...profile} />
+        <section aria-labelledby="book-title">
+          <h2 id="book-title">Reserve a meal</h2>
+          <p className="muted">
+            Booking and changes close 15 minutes before a slot starts.
+          </p>
+          <ResourceState {...slots} />
+          {todayBookings.error && <ResourceState {...todayBookings} />}
+          <div className="meal-grid">
+            {MEALS.map((meal) => {
+              const options = (slots.data || []).filter(
+                (slot) => slot.mealType === meal && slot.bookable,
+              );
+              const alreadyBooked = todayBookings.data?.some(
+                (booking) => booking.mealType === meal,
+              );
+              return (
+                <article className="card meal-card" key={meal}>
+                  <span className="eyebrow">Today's menu slot</span>
+                  <h3 className="capitalize">{meal}</h3>
+                  <p className="muted">
+                    {options.length
+                      ? options.reduce((sum, slot) => sum + slot.available, 0) +
+                        " seats available"
+                      : "No open slots right now"}
+                  </p>
+                  <label>
+                    Preferred time
+                    <select
+                      value={selected[meal] || ""}
+                      onChange={(event) =>
+                        setSelected({ ...selected, [meal]: event.target.value })
+                      }
+                      disabled={!options.length}
+                    >
+                      <option value="">Earliest available</option>
+                      {options.map((slot) => (
+                        <option key={slot._id} value={slot._id}>
+                          {slot.startTime} – {slot.endTime} · {slot.available}{" "}
+                          seats
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="primary"
+                    disabled={
+                      busy || alreadyBooked || !options.length || !profile.data
+                    }
+                    onClick={() =>
+                      action(
+                        "/bookings/create",
+                        { mealType: meal, slotId: selected[meal] || undefined },
+                        true,
+                      )
+                    }
+                  >
+                    {alreadyBooked ? "Booked today" : "Book " + meal}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+        {message && (
+          <p className="notice success" role="status">
+            {message}
+          </p>
+        )}
+        {error && (
+          <p className="notice error" role="alert">
+            {error}
+          </p>
+        )}
+        <section className="section-gap" aria-labelledby="history-title">
+          <div className="page-heading">
+            <h2 id="history-title">Your bookings</h2>
+            <button onClick={history.reload}>Refresh</button>
+          </div>
+          <ResourceState {...history} empty={!history.data?.items.length} />
+          <div className="booking-grid">
+            {history.data?.items.map((booking) => {
+              const status = bookingStatus(booking);
+              const replacements = (slots.data || []).filter(
+                (slot) =>
+                  slot.mealType === booking.mealType &&
+                  slot.bookable &&
+                  slot._id !== booking.slot?._id,
+              );
+              return (
+                <article className="card" key={booking._id}>
+                  <div className="page-heading">
+                    <h3 className="capitalize">{booking.mealType}</h3>
+                    <span className={"badge " + status.toLowerCase()}>
+                      {status}
+                    </span>
+                  </div>
+                  <p>{displayDate(booking.serviceDate || booking.date)}</p>
+                  <p>
+                    {booking.slotTime ||
+                      (booking.slot
+                        ? booking.slot.startTime + " – " + booking.slot.endTime
+                        : "Historical slot")}{" "}
+                    · Floor {booking.floor}
+                  </p>
+                  <div className="actions">
+                    {status === "Active" && (
+                      <button
+                        className="primary"
+                        onClick={() => setPass(booking)}
+                      >
+                        View entry pass
+                      </button>
+                    )}
+                    {canChange(booking) && (
+                      <button
+                        disabled={busy}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Cancel this meal and release your seat?",
+                            )
+                          )
+                            action("/bookings/" + booking._id + "/cancel");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                  {canChange(booking) && replacements.length > 0 && (
+                    <form
+                      className="inline-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        action(
+                          "/bookings/" + booking._id + "/reschedule",
+                          {
+                            slotId: new FormData(event.currentTarget).get(
+                              "slotId",
+                            ),
+                          },
+                          true,
+                        );
+                      }}
+                    >
+                      <label>
+                        Move to
+                        <select name="slotId">
+                          {replacements.map((slot) => (
+                            <option value={slot._id} key={slot._id}>
+                              {slot.startTime} – {slot.endTime}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button disabled={busy}>Reschedule</button>
+                    </form>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          <Pagination data={history.data} page={page} setPage={setPage} />
+        </section>
+      </main>
+      {pass && (
+        <QRPass key={pass._id} booking={pass} onClose={() => setPass(null)} />
       )}
     </div>
   );
 }
-
-/* ================= STYLES ================= */
-const styles = {
-  page: {
-    minHeight: "100vh",
-    padding: "40px",
-    background: "linear-gradient(135deg, #0f172a, #1e293b)",
-    color: "white",
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-    alignItems: "center"
-  },
-  card: {
-    width: "100%",
-    maxWidth: "450px",
-    background: "#1e293b",
-    padding: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 6px 20px rgba(0,0,0,0.4)"
-  },
-  btnRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: "10px",
-    marginTop: "10px"
-  },
-  btn: {
-    flex: 1,
-    padding: "10px",
-    background: "#2563eb",
-    border: "none",
-    borderRadius: "8px",
-    color: "white",
-    cursor: "pointer"
-  },
-  qr: {
-    width: "200px",
-    marginTop: "10px",
-    background: "white",
-    padding: "10px",
-    borderRadius: "10px"
-  },
-  logoutBtn: {
-    marginTop: "10px",
-    padding: "8px 14px",
-    background: "#dc2626",
-    border: "none",
-    borderRadius: "6px",
-    color: "white",
-    cursor: "pointer"
-  },
-  bookingItem: {
-    fontSize: "14px",
-    marginBottom: "10px"
-  }
-};

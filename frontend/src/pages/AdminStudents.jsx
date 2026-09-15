@@ -1,254 +1,272 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import api from "../services/api";
-
+import { errorMessage } from "../services/utils";
+import useResource from "../hooks/useResource";
+import ResourceState from "../components/ResourceState";
+import Pagination from "../components/Pagination";
 export default function AdminStudents() {
-  const [students, setStudents] = useState([]);
-  const [search, setSearch] = useState("");
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    navigate("/admin/login");
-  };
-
-  const fetchStudents = async () => {
-    try {
-      const res = await api.get("/admin/students");
-      setStudents(res.data);
-    } catch (err) {
-      console.error("Fetch students error:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  const updateFloor = async (id, floor) => {
-    try {
-      await api.put(`/admin/students/${id}/floor`, { floor });
-      fetchStudents();
-    } catch (err) {
-      console.error("Update floor error:", err);
-    }
-  };
-
-  const filtered = students.filter(s =>
-    s.rollNo.toLowerCase().includes(search.toLowerCase()) ||
-    s.name.toLowerCase().includes(search.toLowerCase())
+  const [page, setPage] = useState(1),
+    [search, setSearch] = useState("");
+  const [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const [resetId, setResetId] = useState("");
+  const resource = useResource(
+    "/admin/students?" + new URLSearchParams({ page, search }),
   );
-
+  async function mutate(method, path, data, form) {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    setError("");
+    try {
+      const response = await api[method](path, data);
+      setMessage(response.data.message);
+      form?.reset();
+      setResetId("");
+      resource.reload();
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <img src="/bennett-logo.png" alt="Logo" style={styles.headerLogo} />
-          <h2 style={styles.title}>Admin Dashboard</h2>
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Student access</p>
+          <h1>Students</h1>
+          <p className="muted">
+            Enroll students, assign dining floors, and manage access.
+          </p>
         </div>
-        <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
-      </header>
-
-      <div style={styles.content}>
-        <div style={styles.statsBar}>
-          <div style={styles.statCard}>
-            <h3>{students.length}</h3>
-            <p>Total Students</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>{students.filter(s => s.floor === 1).length}</h3>
-            <p>Floor 1 Residents</p>
-          </div>
-          <div style={styles.statCard}>
-            <h3>{students.filter(s => s.floor === 2).length}</h3>
-            <p>Floor 2 Residents</p>
-          </div>
-        </div>
-
-        <div style={styles.tableCard}>
-          <div style={styles.tableHeader}>
-            <h3>👨‍🎓 Student Management</h3>
-            <input
-              placeholder="🔍 Search by Name or Roll No"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              style={styles.searchInput}
-            />
-          </div>
-
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Roll No</th>
-                  <th style={styles.th}>Name</th>
-                  <th style={styles.th}>Hostel</th>
-                  <th style={styles.th}>Floor</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(student => (
-                  <tr key={student._id} style={styles.tr}>
-                    <td style={styles.td}>{student.rollNo}</td>
-                    <td style={styles.td}>{student.name}</td>
-                    <td style={styles.td}>{student.hostel}</td>
-                    <td style={styles.td}>
-                      <span style={{
-                        ...styles.statusTag,
-                        background: student.floor === 1 ? "#0f766e" : "#1e293b"
-                      }}>
-                        Floor {student.floor}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <button
-                        onClick={() => updateFloor(student._id, 1)}
-                        style={{ ...styles.actionBtn, background: "#0f766e" }}
-                        disabled={student.floor === 1}
-                      >
-                        Set F1
-                      </button>
-                      <button
-                        onClick={() => updateFloor(student._id, 2)}
-                        style={{ ...styles.actionBtn, background: "#1e293b" }}
-                        disabled={student.floor === 2}
-                      >
-                        Set F2
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <form
+          className="inline-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSearch(String(new FormData(event.currentTarget).get("search")));
+            setPage(1);
+          }}
+        >
+          <label>
+            Search name or roll number
+            <input name="search" maxLength={100} type="search" />
+          </label>
+          <button>Search</button>
+        </form>
       </div>
-    </div>
+      <details className="card">
+        <summary>Enroll a student</summary>
+        <form
+          className="form-grid section-gap"
+          onSubmit={(event) => {
+            event.preventDefault();
+            mutate(
+              "post",
+              "/admin/students",
+              Object.fromEntries(new FormData(event.currentTarget)),
+              event.currentTarget,
+            );
+          }}
+        >
+          <label>
+            Roll number
+            <input
+              name="rollNo"
+              required
+              maxLength={40}
+              pattern="[A-Za-z0-9-]+"
+            />
+          </label>
+          <label>
+            Full name
+            <input name="name" required maxLength={100} />
+          </label>
+          <label>
+            Hostel
+            <input name="hostel" required maxLength={100} />
+          </label>
+          <label>
+            Dining floor
+            <select name="floor">
+              <option value="1">Floor 1</option>
+              <option value="2">Floor 2</option>
+            </select>
+          </label>
+          <label>
+            Initial password
+            <input
+              name="password"
+              type="password"
+              minLength={12}
+              maxLength={72}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+          <button disabled={busy} className="primary">
+            Enroll student
+          </button>
+        </form>
+      </details>
+      <details className="card section-gap">
+        <summary>Bulk enrollment</summary>
+        <p className="muted small">
+          Upload a JSON array of up to 100 records with rollNo, name, hostel,
+          floor, and password. Each password needs at least 12 characters. The
+          entire import succeeds or is rolled back.
+        </p>
+        <form
+          className="inline-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const file = new FormData(form).get("file");
+            try {
+              if (file.size > 120000)
+                throw new Error("File must be smaller than 120 KB");
+              const students = JSON.parse(await file.text());
+              await mutate(
+                "post",
+                "/admin/students/import",
+                { students },
+                form,
+              );
+            } catch (error) {
+              setError(error.message || "Invalid JSON file");
+            }
+          }}
+        >
+          <label>
+            Enrollment file
+            <input
+              name="file"
+              type="file"
+              accept=".json,application/json"
+              required
+            />
+          </label>
+          <button disabled={busy}>Import students</button>
+        </form>
+      </details>
+      {message && (
+        <p className="notice success" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <ResourceState {...resource} empty={!resource.data?.items.length} />
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Roll number</th>
+              <th>Hostel</th>
+              <th>Floor</th>
+              <th>Access</th>
+              <th>Account</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resource.data?.items.map((student) => (
+              <tr key={student._id}>
+                <td>{student.name}</td>
+                <td>{student.rollNo}</td>
+                <td>{student.hostel}</td>
+                <td>
+                  <select
+                    aria-label={"Dining floor for " + student.name}
+                    value={student.floor}
+                    disabled={busy}
+                    onChange={(event) =>
+                      mutate(
+                        "put",
+                        "/admin/students/" + student._id + "/floor",
+                        { floor: Number(event.target.value) },
+                      )
+                    }
+                  >
+                    <option value="1">Floor 1</option>
+                    <option value="2">Floor 2</option>
+                  </select>
+                </td>
+                <td>
+                  <button
+                    disabled={busy}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          (student.active === false
+                            ? "Restore"
+                            : "Deactivate") +
+                            " access for " +
+                            student.name +
+                            "?",
+                        )
+                      )
+                        mutate(
+                          "put",
+                          "/admin/students/" + student._id + "/active",
+                          { active: student.active === false },
+                        );
+                    }}
+                  >
+                    {student.active === false ? "Restore access" : "Deactivate"}
+                  </button>
+                </td>
+                <td>
+                  {resetId === student._id ? (
+                    <form
+                      className="inline-form"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        mutate(
+                          "put",
+                          "/admin/students/" + student._id + "/password",
+                          {
+                            password: new FormData(event.currentTarget).get(
+                              "password",
+                            ),
+                          },
+                        );
+                      }}
+                    >
+                      <input
+                        name="password"
+                        type="password"
+                        minLength={12}
+                        maxLength={72}
+                        required
+                        autoComplete="new-password"
+                        aria-label={"New password for " + student.name}
+                      />
+                      <button disabled={busy}>Save</button>
+                      <button type="button" onClick={() => setResetId("")}>
+                        Cancel
+                      </button>
+                    </form>
+                  ) : (
+                    <button onClick={() => setResetId(student._id)}>
+                      Reset password
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Pagination data={resource.data} page={page} setPage={setPage} />
+      <p className="muted small">
+        Students with upcoming unused bookings must cancel them before a floor
+        change or deactivation. Historical records are retained.
+      </p>
+    </>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "#f1f5f9",
-    color: "#1e293b",
-    fontFamily: "'Inter', sans-serif"
-  },
-  header: {
-    background: "#1e293b",
-    color: "white",
-    padding: "15px 40px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-  },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "15px"
-  },
-  headerLogo: {
-    height: "40px",
-    filter: "brightness(0) invert(1)"
-  },
-  title: {
-    fontSize: "20px",
-    fontWeight: "600"
-  },
-  logoutBtn: {
-    padding: "8px 20px",
-    background: "#ef4444",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontWeight: "600"
-  },
-  content: {
-    padding: "30px 40px",
-    maxWidth: "1200px",
-    margin: "0 auto"
-  },
-  statsBar: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "20px",
-    marginBottom: "30px"
-  },
-  statCard: {
-    background: "white",
-    padding: "20px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
-    textAlign: "center"
-  },
-  tableCard: {
-    background: "white",
-    borderRadius: "12px",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
-    overflow: "hidden"
-  },
-  tableHeader: {
-    padding: "20px",
-    borderBottom: "1px solid #e2e8f0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "15px"
-  },
-  searchInput: {
-    padding: "10px 15px",
-    borderRadius: "8px",
-    border: "1px solid #cbd5e1",
-    width: "300px",
-    outline: "none",
-    fontSize: "14px"
-  },
-  tableWrapper: {
-    overflowX: "auto"
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    textAlign: "left"
-  },
-  th: {
-    padding: "15px 20px",
-    background: "#f8fafc",
-    color: "#64748b",
-    fontSize: "13px",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    fontWeight: "600"
-  },
-  tr: {
-    borderBottom: "1px solid #e2e8f0",
-    transition: "background 0.2s"
-  },
-  td: {
-    padding: "15px 20px",
-    fontSize: "14px"
-  },
-  statusTag: {
-    padding: "4px 10px",
-    borderRadius: "20px",
-    color: "white",
-    fontSize: "12px",
-    fontWeight: "600"
-  },
-  actionBtn: {
-    padding: "6px 12px",
-    border: "none",
-    borderRadius: "6px",
-    color: "white",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: "600",
-    marginRight: "5px",
-    opacity: 1,
-    transition: "opacity 0.2s"
-  }
-};

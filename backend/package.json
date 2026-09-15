@@ -1,12 +1,14 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Transactional campus meal booking API",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test --test-concurrency=1 tests/*.test.js",
+    "seed:slots": "node scripts/createMealSlots.js",
+    "audit:legacy": "node scripts/auditLegacy.js"
   },
   "keywords": [],
   "author": "",
@@ -20,5 +22,11 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.4",
     "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.2.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

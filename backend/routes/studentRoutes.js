@@ -1,36 +1,24 @@
-const express = require("express");
+const router = require("express").Router();
+const bcrypt = require("bcryptjs");
 const Student = require("../models/Student");
 const studentAuth = require("../middleware/studentAuth");
-
-const router = express.Router();
-
-/* ================= CREATE STUDENT ================= */
-router.post("/create", async (req, res) => {
-  try {
-    const { rollNo, name, hostel, password } = req.body;
-
-    const floor = rollNo.endsWith("1") ? 1 : 2;
-
-    const student = new Student({
-      rollNo,
-      name,
-      hostel,
-      floor,
-      password
-    });
-
-    await student.save();
-
-    res.status(201).json({ message: "Student created successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(400).json({ error: error.message });
-  }
+const { check, password } = require("../lib/domain");
+router.get("/profile", studentAuth, (req, res) => res.json(req.student));
+router.put("/password", studentAuth, async (req, res) => {
+  const nextPassword = password(req.body.newPassword);
+  check(
+    typeof req.body.currentPassword === "string" &&
+      Buffer.byteLength(req.body.currentPassword) <= 72,
+    "Current password is required",
+  );
+  const student = await Student.findById(req.student._id).select("+password");
+  check(
+    await bcrypt.compare(req.body.currentPassword, student.password),
+    "Current password is incorrect",
+    400,
+  );
+  student.password = nextPassword;
+  await student.save();
+  res.json({ message: "Password changed. Please log in again" });
 });
-
-/* ================= STUDENT PROFILE ================= */
-router.get("/profile", studentAuth, (req, res) => {
-  res.json(req.student);
-});
-
 module.exports = router;

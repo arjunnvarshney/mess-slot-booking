@@ -1,13 +1,9 @@
 import { Navigate, Outlet } from "react-router-dom";
-
+import { tokenFor } from "../services/session";
 export default function AdminRoute() {
-    const token = localStorage.getItem("adminToken");
-
-    // If no token → go to login
-    if (!token) {
-        return <Navigate to="/admin/login" replace />;
-    }
-
-    // If token exists → allow access
-    return <Outlet />;
+  return tokenFor("admin") ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/admin/login" replace />
+  );
 }

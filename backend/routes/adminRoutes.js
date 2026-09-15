@@ -1,187 +1,155 @@
-const express = require("express");
+const router = require("express").Router();
+const bcrypt = require("bcryptjs");
 const Admin = require("../models/Admin");
 const Booking = require("../models/Booking");
-const MealSlot = require("../models/MealSlot");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const adminAuth = require("../middleware/adminAuth");
-
-const router = express.Router();
-
-/* ================= ADMIN REGISTER ================= */
+const rateLimit = require("../middleware/rateLimit");
+const { login } = require("../services/authService");
+const report = require("../services/reportService");
+const {
+  check,
+  text,
+  password,
+  date,
+  today,
+  pagination,
+  MEALS,
+} = require("../lib/domain");
+router.post(
+  "/login",
+  rateLimit({
+    keyFor: (req) =>
+      req.ip +
+      ":" +
+      (typeof req.body.username === "string"
+        ? req.body.username.trim().slice(0, 100)
+        : "invalid"),
+  }),
+  async (req, res) =>
+    res.json({ token: await login(Admin, "username", req.body, "admin") }),
+);
+router.use(adminAuth);
 router.post("/register", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password)
-      return res.status(400).json({ error: "Username and password required" });
-
-    const existing = await Admin.findOne({ username });
-    if (existing)
-      return res.status(400).json({ error: "Admin already exists" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const admin = new Admin({ username, password: hashedPassword });
-
-    await admin.save();
-    res.status(201).json({ message: "Admin registered successfully" });
-  } catch (err) {
-    console.error("Admin register error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-/* ================= ADMIN LOGIN ================= */
-router.post("/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const admin = await Admin.findOne({ username });
-    if (!admin) return res.status(401).json({ error: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
-
-    const token = jwt.sign(
-      { adminId: admin._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-
-    res.json({ message: "Admin login successful", token });
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-/* ================= GET LOGGED IN ADMIN ================= */
-router.get("/me", adminAuth, (req, res) => {
-  res.json({
-    message: "Admin authenticated",
-    admin: { id: req.admin._id, username: req.admin.username }
+  await Admin.create({
+    username: text(req.body.username, "Username"),
+    password: password(req.body.password),
   });
+  res.status(201).json({ message: "Admin created" });
 });
-
-/* =========================================================
-   🆕 TODAY STATS (DASHBOARD CARDS)
-========================================================= */
-router.get("/stats/today", adminAuth, async (req, res) => {
-  try {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-
-    const bookings = await Booking.find({
-      date: { $gte: start, $lte: end },
-      status: "active"
-    });
-
-    const stats = {
-      breakfast: bookings.filter(b => b.mealType === "breakfast").length,
-      lunch: bookings.filter(b => b.mealType === "lunch").length,
-      dinner: bookings.filter(b => b.mealType === "dinner").length,
-      totalStudents: new Set(bookings.map(b => b.student.toString())).size
-    };
-
-    res.json(stats);
-  } catch (err) {
-    console.error("Today stats error:", err);
-    res.status(500).json({ error: "Server error" });
+router.get("/me", (req, res) =>
+  res.json({ admin: { id: req.admin._id, username: req.admin.username } }),
+);
+router.put("/password", async (req, res) => {
+  const nextPassword = password(req.body.newPassword);
+  check(
+    typeof req.body.currentPassword === "string" &&
+      Buffer.byteLength(req.body.currentPassword) <= 72,
+    "Current password is required",
+  );
+  const admin = await Admin.findById(req.admin._id).select("+password");
+  check(
+    await bcrypt.compare(req.body.currentPassword, admin.password),
+    "Current password is incorrect",
+  );
+  admin.password = nextPassword;
+  await admin.save();
+  res.json({ message: "Password changed. Please log in again" });
+});
+router.get("/analytics/daily", async (req, res) =>
+  res.json(await report.daily(date(req.query.date || today()))),
+);
+router.get("/analytics/weekly", async (req, res) =>
+  res.json(await report.weekly(date(req.query.date || today()))),
+);
+router.get("/stats/today", async (req, res) =>
+  res.json(await report.daily(today())),
+);
+router.get("/bookings", async (req, res) => {
+  const { page, limit, skip } = pagination(req.query);
+  const filter = req.query.date ? report.dateFilter(date(req.query.date)) : {};
+  if (req.query.mealType) {
+    check(MEALS.includes(req.query.mealType), "Invalid meal");
+    filter.mealType = req.query.mealType;
   }
-});
-
-/* =========================================================
-   🆕 TODAY REPORT (FOR CSV EXPORT)
-========================================================= */
-router.get("/reports/today", adminAuth, async (req, res) => {
-  try {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-
-    const bookings = await Booking.find({
-      date: { $gte: start, $lte: end }
-    }).populate("student", "name rollNo hostel floor");
-
-    res.json(bookings);
-  } catch (err) {
-    console.error("Report export error:", err);
-    res.status(500).json({ error: "Server error" });
+  if (req.query.status) {
+    check(["active", "cancelled"].includes(req.query.status), "Invalid status");
+    filter.status = req.query.status;
   }
-});
-
-/* ================= DAILY ANALYTICS ================= */
-router.get("/analytics/daily", adminAuth, async (req, res) => {
-  try {
-    const { date } = req.query;
-    if (!date) return res.status(400).json({ error: "Date is required (YYYY-MM-DD)" });
-
-    const start = new Date(`${date}T00:00:00.000Z`);
-    const end = new Date(`${date}T23:59:59.999Z`);
-
-    const stats = await Booking.aggregate([
-      { $match: { date: { $gte: start, $lte: end }, status: "active" } },
-      {
-        $group: {
-          _id: "$mealType",
-          totalBookings: { $sum: 1 },
-          totalConsumed: { $sum: { $cond: ["$qrUsed", 1, 0] } }
-        }
-      }
-    ]);
-
-    res.json(stats);
-  } catch (err) {
-    console.error("Daily analytics error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-/* ================= WEEKLY ANALYTICS ================= */
-router.get("/analytics/weekly", adminAuth, async (req, res) => {
-  try {
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
-
-    const stats = await Booking.aggregate([
-      { $match: { date: { $gte: sevenDaysAgo, $lte: today }, status: "active" } },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-          totalBookings: { $sum: 1 },
-          totalConsumed: { $sum: { $cond: ["$qrUsed", 1, 0] } }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    res.json(stats);
-  } catch (err) {
-    console.error("Weekly analytics error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-/* ================= GET ALL BOOKINGS ================= */
-router.get("/bookings", adminAuth, async (req, res) => {
-  try {
-    const bookings = await Booking.find()
+  const [items, total] = await Promise.all([
+    Booking.find(filter)
       .populate("student", "name rollNo hostel")
-      .populate("slot", "mealType startTime endTime floor")
-      .sort({ date: -1 });
-
-    res.json(bookings);
-  } catch (err) {
-    console.error("Admin bookings error:", err);
-    res.status(500).json({ error: "Server error" });
+      .populate("slot", "startTime endTime")
+      .sort({ date: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+  res.json({ items, total, page, limit });
+});
+router.get("/reports", async (req, res, next) => {
+  const day = date(req.query.date || today());
+  res.set({
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": 'attachment; filename="mess-report-' + day + '.csv"',
+    "Cache-Control": "no-store",
+  });
+  const cursor = Booking.find(report.dateFilter(day))
+    .populate("student", "name rollNo hostel")
+    .sort({ _id: 1 })
+    .lean()
+    .cursor();
+  try {
+    res.write(
+      "\uFEFF" +
+        [
+          "Date",
+          "Name",
+          "Roll No",
+          "Hostel",
+          "Floor",
+          "Meal",
+          "Time",
+          "Status",
+          "Consumed",
+        ]
+          .map(report.csvCell)
+          .join(",") +
+        "\r\n",
+    );
+    for await (const b of cursor) {
+      if (res.destroyed) break;
+      const student = b.studentSnapshot?.name
+        ? b.studentSnapshot
+        : b.student || {};
+      const row = [
+        b.serviceDate || day,
+        student.name,
+        student.rollNo,
+        student.hostel,
+        b.floor,
+        b.mealType,
+        b.slotTime || "",
+        b.status,
+        b.qrUsed ? "YES" : "NO",
+      ];
+      if (!res.write(row.map(report.csvCell).join(",") + "\r\n")) {
+        await new Promise((resolve) => {
+          const done = () => {
+            res.off("drain", done);
+            res.off("close", done);
+            resolve();
+          };
+          res.once("drain", done);
+          res.once("close", done);
+        });
+      }
+    }
+    res.end();
+  } catch (error) {
+    next(error);
+  } finally {
+    await cursor.close();
   }
 });
-
 module.exports = router;

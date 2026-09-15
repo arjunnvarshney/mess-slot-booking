@@ -1,184 +1,176 @@
-import { useEffect, useState, useContext } from "react";
-import { ThemeContext } from "../context/ThemeContext";
-import api from "../services/api";
+import { useState } from "react";
 import {
-    BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-    ResponsiveContainer, Legend, LineChart, Line,
-    PieChart, Pie, Cell
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+  LineChart,
+  Line,
 } from "recharts";
-
-const COLORS = ["#4CAF50", "#2196F3", "#FF9800", "#9C27B0", "#E91E63"];
-
+import api from "../services/api";
+import { campusDate, errorMessage, displayDate } from "../services/utils";
+import useResource from "../hooks/useResource";
+import ResourceState from "../components/ResourceState";
 export default function DailyAnalytics() {
-    const { darkMode } = useContext(ThemeContext);
-
-    const cardStyle = {
-        flex: "1",
-        minWidth: "220px",
-        padding: "22px",
-        borderRadius: "14px",
-        textAlign: "center",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
-        background: darkMode ? "#1e293b" : "white",
-        color: darkMode ? "white" : "#0f172a"
-    };
-
-    const chartCard = {
-        padding: "25px",
-        borderRadius: "14px",
-        marginTop: "35px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
-        background: darkMode ? "#1e293b" : "white"
-    };
-
-    const [dailyData, setDailyData] = useState([]);
-    const [weeklyData, setWeeklyData] = useState([]);
-    const [floorData, setFloorData] = useState([]);
-    const [statsToday, setStatsToday] = useState(null);
-    const [selectedDate, setSelectedDate] = useState(
-        new Date().toLocaleDateString("en-CA")
-    );
-    const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        const fetchAll = async () => {
-            try {
-                setLoading(true);
-
-                const daily = await api.get(`/admin/analytics/daily?date=${selectedDate}`);
-                setDailyData(daily.data.map(item => ({
-                    meal: item._id.toUpperCase(),
-                    bookings: item.totalBookings,
-                    consumed: item.totalConsumed
-                })));
-
-                const weekly = await api.get("/admin/analytics/weekly");
-                setWeeklyData(weekly.data.map(item => ({
-                    date: item._id,
-                    bookings: item.totalBookings,
-                    consumed: item.totalConsumed
-                })));
-
-                // Fetching stats for top cards
-                const stats = await api.get("/admin/stats/today");
-                setStatsToday(stats.data);
-
-            } catch (err) {
-                console.error("Dashboard fetch error:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAll();
-    }, [selectedDate]);
-
-    const downloadReport = async () => {
-        try {
-            const res = await api.get("/admin/reports/today");
-            const rows = res.data;
-
-            const csv = [
-                ["Name", "Roll No", "Hostel", "Floor", "Meal", "Used"],
-                ...rows.map(b => [
-                    b.student?.name,
-                    b.student?.rollNo,
-                    b.student?.hostel,
-                    b.student?.floor,
-                    b.mealType,
-                    b.qrUsed ? "YES" : "NO"
-                ])
-            ].map(e => e.join(",")).join("\n");
-
-            const blob = new Blob([csv], { type: "text/csv" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `mess_report_${selectedDate}.csv`;
-            link.click();
-        } catch (err) {
-            alert("Failed to download report");
-        }
-    };
-
-    return (
-        <div style={{
-            minHeight: "100vh",
-            padding: "30px 40px",
-            background: darkMode ? "#0f172a" : "#f1f5f9",
-            color: darkMode ? "#f1f5f9" : "#0f172a"
-        }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "30px", alignItems: "center", flexWrap: "wrap", gap: "20px" }}>
-                <h1>📊 Daily Analytics</h1>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={e => setSelectedDate(e.target.value)}
-                        style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
-                    />
-                    <button
-                        onClick={downloadReport}
-                        style={{
-                            padding: "8px 16px",
-                            background: "#0f766e",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontWeight: "600"
-                        }}
-                    >
-                        ⬇ Export Report
-                    </button>
-                </div>
-            </div>
-
-            {loading && <p>Loading dashboard...</p>}
-
-            {statsToday && (
-                <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-                    <div style={cardStyle}><h4>Breakfast</h4><p style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{statsToday.breakfast}</p></div>
-                    <div style={cardStyle}><h4>Lunch</h4><p style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{statsToday.lunch}</p></div>
-                    <div style={cardStyle}><h4>Dinner</h4><p style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{statsToday.dinner}</p></div>
-                    <div style={cardStyle}><h4>Unique Students</h4><p style={{ fontSize: "1.5rem", fontWeight: "bold" }}>{statsToday.totalStudents}</p></div>
-                </div>
-            )}
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px" }}>
-                {dailyData.length > 0 && (
-                    <div style={chartCard}>
-                        <h2 style={{ marginBottom: "20px" }}>Meal Booking Overview</h2>
-                        <ResponsiveContainer width="100%" height={350}>
-                            <BarChart data={dailyData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="meal" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="bookings" fill="#4CAF50" />
-                                <Bar dataKey="consumed" fill="#2196F3" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
-
-                {weeklyData.length > 0 && (
-                    <div style={chartCard}>
-                        <h2 style={{ marginBottom: "20px" }}>Weekly Trend</h2>
-                        <ResponsiveContainer width="100%" height={350}>
-                            <LineChart data={weeklyData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Line type="monotone" dataKey="bookings" stroke="#4CAF50" strokeWidth={3} />
-                                <Line type="monotone" dataKey="consumed" stroke="#2196F3" strokeWidth={3} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
-            </div>
+  const [date, setDate] = useState(campusDate()),
+    [error, setError] = useState(""),
+    [exporting, setExporting] = useState(false);
+  const daily = useResource("/admin/analytics/daily?date=" + date, 30000);
+  const weekly = useResource("/admin/analytics/weekly?date=" + date, 30000);
+  const meals = daily.data?.meals || [];
+  const booked = meals.reduce((sum, row) => sum + row.totalBookings, 0),
+    consumed = meals.reduce((sum, row) => sum + row.totalConsumed, 0);
+  async function download() {
+    setExporting(true);
+    setError("");
+    try {
+      const response = await api.get("/admin/reports?date=" + date, {
+        responseType: "blob",
+        timeout: 60000,
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "mess-report-" + date + ".csv";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setExporting(false);
+    }
+  }
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Campus dining overview</p>
+          <h1>Make every meal count.</h1>
+          <p className="muted">
+            {displayDate(date)} · Updates every 30 seconds
+          </p>
         </div>
-    );
+        <div className="actions">
+          <label>
+            Report date
+            <input
+              type="date"
+              value={date}
+              onChange={(event) => {
+                if (event.target.value) setDate(event.target.value);
+              }}
+            />
+          </label>
+          <button className="primary" disabled={exporting} onClick={download}>
+            {exporting ? "Exporting…" : "Export CSV"}
+          </button>
+        </div>
+      </div>
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <ResourceState {...daily} />
+      <div className="stats-grid">
+        {[
+          ["Reservations", booked],
+          ["Meals consumed", consumed],
+          ["Unique students", daily.data?.totalStudents || 0],
+          ["Not yet consumed", booked - consumed],
+        ].map(([label, value]) => (
+          <div className="card stat" key={label}>
+            <span className="muted">{label}</span>
+            <strong>{value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="charts-grid">
+        <section className="card">
+          <h2>Meals on the selected date</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={meals}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="_id" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar
+                name="Reservations"
+                dataKey="totalBookings"
+                fill="#0f766e"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                name="Consumed"
+                dataKey="totalConsumed"
+                fill="#d97706"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </section>
+        <section className="card">
+          <h2>Seven-day trend</h2>
+          <ResourceState {...weekly} />
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={weekly.data || []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="_id" tickFormatter={(value) => value.slice(5)} />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Line
+                name="Reservations"
+                dataKey="totalBookings"
+                stroke="#0f766e"
+                strokeWidth={2}
+              />
+              <Line
+                name="Consumed"
+                dataKey="totalConsumed"
+                stroke="#d97706"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </section>
+      </div>
+      <section className="card section-gap">
+        <h2>Meal totals</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Meal</th>
+                <th>Reservations</th>
+                <th>Consumed</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              {meals.map((meal) => (
+                <tr key={meal._id}>
+                  <td className="capitalize">{meal._id}</td>
+                  <td>{meal.totalBookings}</td>
+                  <td>{meal.totalConsumed}</td>
+                  <td>{meal.totalBookings - meal.totalConsumed}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="muted small">
+          Remaining reservations may still be used during their meal window.
+          Cancelled bookings are excluded.
+        </p>
+      </section>
+    </>
+  );
 }

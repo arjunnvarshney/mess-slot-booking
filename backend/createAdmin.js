@@ -1,23 +1,12 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
-
+const { text, password } = require("./lib/domain");
 const Admin = require("./models/Admin");
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("MongoDB connected");
-
-    await Admin.deleteMany({ username: process.env.ADMIN_USERNAME });
-
-    await Admin.create({
-      username: process.env.ADMIN_USERNAME,
-      password: process.env.ADMIN_PASSWORD
-    });
-
-    console.log("✅ Admin created securely");
-    process.exit();
-  })
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+require("./scripts/runScript")(async () => {
+  const username = text(process.env.ADMIN_USERNAME, "ADMIN_USERNAME");
+  const secret = password(process.env.ADMIN_PASSWORD);
+  if (await Admin.exists({ username })) {
+    console.log("Administrator already exists; no changes made");
+    return;
+  }
+  await Admin.create({ username, password: secret });
+  console.log("Administrator created");
+});

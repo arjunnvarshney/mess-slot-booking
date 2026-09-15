@@ -1,80 +1,60 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
-
 const MealSlot = require("../models/MealSlot");
-
-const SLOT_DURATION = 15; // minutes
-const CAPACITY = 120;
-const FLOORS = [1, 2];
-
-const MEALS = [
-  {
-    mealType: "breakfast",
-    start: "07:30",
-    end: "09:30"
-  },
-  {
-    mealType: "lunch",
-    start: "12:00",
-    end: "15:00"
-  },
-  {
-    mealType: "snacks",
-    start: "17:00",
-    end: "18:00"
-  },
-  {
-    mealType: "dinner",
-    start: "20:00",
-    end: "22:00"
-  }
-];
-
-// Convert HH:MM → minutes
-const toMinutes = (time) => {
-  const [h, m] = time.split(":").map(Number);
+const { today, date, addDays, check } = require("../lib/domain");
+const toMinutes = (value) => {
+  const [h, m] = value.split(":").map(Number);
   return h * 60 + m;
 };
-
-// Convert minutes → HH:MM
-const toTime = (minutes) => {
-  const h = String(Math.floor(minutes / 60)).padStart(2, "0");
-  const m = String(minutes % 60).padStart(2, "0");
-  return `${h}:${m}`;
-};
-
-const createSlots = async () => {
-  await mongoose.connect(process.env.MONGO_URI);
-  console.log("MongoDB connected");
-
-  for (const meal of MEALS) {
-    const startMin = toMinutes(meal.start);
-    const endMin = toMinutes(meal.end);
-
-    for (const floor of FLOORS) {
-      for (let t = startMin; t < endMin; t += SLOT_DURATION) {
-        const slot = {
-          mealType: meal.mealType,
-          floor,
-          startTime: toTime(t),
-          endTime: toTime(t + SLOT_DURATION),
-          capacity: CAPACITY,
-          bookedCount: 0
-        };
-
-        await MealSlot.create(slot);
-        console.log(
-          `Created ${meal.mealType} | Floor ${floor} | ${slot.startTime}-${slot.endTime}`
-        );
+const toTime = (value) =>
+  String(Math.floor(value / 60)).padStart(2, "0") +
+  ":" +
+  String(value % 60).padStart(2, "0");
+require("./runScript")(async () => {
+  const firstDay = date(process.argv[2] || today());
+  const days = Number(process.argv[3] || 7);
+  check(
+    firstDay >= today() && Number.isInteger(days) && days >= 1 && days <= 31,
+    "Use a current/future date and between 1 and 31 days",
+  );
+  let created = 0;
+  for (let day = 0; day < days; day++) {
+    for (const [mealType, start, end] of [
+      ["breakfast", "07:30", "09:30"],
+      ["lunch", "12:00", "15:00"],
+      ["snacks", "17:00", "18:00"],
+      ["dinner", "20:00", "22:00"],
+    ]) {
+      for (const floor of [1, 2]) {
+        for (
+          let minute = toMinutes(start);
+          minute < toMinutes(end);
+          minute += 15
+        ) {
+          const key = {
+            date: addDays(firstDay, day),
+            mealType,
+            floor,
+            startTime: toTime(minute),
+          };
+          const result = await MealSlot.updateOne(
+            key,
+            {
+              $setOnInsert: {
+                ...key,
+                endTime: toTime(minute + 15),
+                capacity: 120,
+                bookedCount: 0,
+                active: true,
+              },
+            },
+            { upsert: true, runValidators: true },
+          );
+          created += result.upsertedCount;
+        }
       }
     }
   }
-
-  console.log("✅ ALL MEAL SLOTS CREATED");
-  process.exit();
-};
-
-createSlots().catch((err) => {
-  console.error(err);
-  process.exit(1);
+  console.log(
+    created +
+      " daily slots created; existing capacities and bookings preserved",
+  );
 });

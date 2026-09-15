@@ -1,143 +1,202 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "../services/api";
-
+import { campusDate, MEALS, errorMessage } from "../services/utils";
+import useResource from "../hooks/useResource";
+import ResourceState from "../components/ResourceState";
+import Pagination from "../components/Pagination";
 export default function ManageSlots() {
-    const [slots, setSlots] = useState([]);
-    const [form, setForm] = useState({
-        mealType: "breakfast",
-        floor: "",
-        date: "",
-        startTime: "",
-        endTime: "",
-        capacity: ""
-    });
-
-    const fetchSlots = async () => {
-        try {
-            const res = await api.get("/admin/slots");
-            setSlots(res.data);
-        } catch (err) {
-            console.error("Failed to fetch slots", err);
-        }
-    };
-
-    useEffect(() => {
-        fetchSlots();
-    }, []);
-
-    const handleChange = e => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = async e => {
-        e.preventDefault();
-        try {
-            await api.post("/admin/slots", form);
-            fetchSlots();
-        } catch (err) {
-            alert("Error adding slot: " + (err.response?.data?.error || err.message));
-        }
-    };
-
-    const deleteSlot = async id => {
-        if (window.confirm("Delete this slot?")) {
-            await api.delete(`/admin/slots/${id}`);
-            fetchSlots();
-        }
-    };
-
-    return (
-        <div style={{ padding: "30px" }}>
-            <h2>🍽 Manage Meal Slots</h2>
-
-            {/* CREATE SLOT FORM */}
-            <form onSubmit={handleSubmit} style={styles.form}>
-                <select name="mealType" onChange={handleChange} style={styles.input}>
-                    <option value="breakfast">Breakfast</option>
-                    <option value="lunch">Lunch</option>
-                    <option value="dinner">Dinner</option>
-                </select>
-
-                <input name="floor" placeholder="Floor" onChange={handleChange} required style={styles.input} />
-                <input type="date" name="date" onChange={handleChange} required style={styles.input} />
-                <input type="time" name="startTime" onChange={handleChange} required style={styles.input} />
-                <input type="time" name="endTime" onChange={handleChange} required style={styles.input} />
-                <input type="number" name="capacity" placeholder="Capacity" onChange={handleChange} required style={styles.input} />
-
-                <button type="submit" style={styles.addBtn}>Add Slot</button>
-            </form>
-
-            {/* SLOT TABLE */}
-            <div style={{ overflowX: "auto" }}>
-                <table style={styles.table}>
-                    <thead>
-                        <tr style={{ background: "#1e293b", color: "white" }}>
-                            <th style={styles.th}>Meal</th>
-                            <th style={styles.th}>Floor</th>
-                            <th style={styles.th}>Date</th>
-                            <th style={styles.th}>Time</th>
-                            <th style={styles.th}>Capacity</th>
-                            <th style={styles.th}>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {slots.map(slot => (
-                            <tr key={slot._id} style={{ borderBottom: "1px solid #334155" }}>
-                                <td style={styles.td}>{slot.mealType}</td>
-                                <td style={styles.td}>{slot.floor}</td>
-                                <td style={styles.td}>{new Date(slot.date).toLocaleDateString()}</td>
-                                <td style={styles.td}>{slot.startTime} - {slot.endTime}</td>
-                                <td style={styles.td}>{slot.capacity}</td>
-                                <td style={styles.td}>
-                                    <button onClick={() => deleteSlot(slot._id)} style={styles.delBtn}>Delete</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-const styles = {
-    form: {
-        background: "#1e293b",
-        padding: "20px",
-        borderRadius: "10px",
-        marginBottom: "30px",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "10px"
-    },
-    input: {
-        padding: "10px",
-        borderRadius: "5px",
-        border: "none",
-        flex: "1",
-        minWidth: "150px"
-    },
-    addBtn: {
-        padding: "10px 20px",
-        background: "#4CAF50",
-        color: "white",
-        border: "none",
-        borderRadius: "5px",
-        cursor: "pointer",
-        fontWeight: "600"
-    },
-    table: {
-        width: "100%",
-        borderCollapse: "collapse"
-    },
-    th: { padding: "12px", textAlign: "left" },
-    td: { padding: "10px" },
-    delBtn: {
-        background: "#dc2626",
-        color: "white",
-        border: "none",
-        padding: "5px 10px",
-        borderRadius: "4px",
-        cursor: "pointer"
+  const [date, setDate] = useState(campusDate()),
+    [page, setPage] = useState(1);
+  const [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  const resource = useResource(
+    "/admin/slots?" + new URLSearchParams({ date, page }),
+  );
+  async function submit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await api.post("/admin/slots", {
+        ...Object.fromEntries(new FormData(form)),
+        date,
+      });
+      setMessage("Slot created");
+      form.reset();
+      resource.reload();
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setBusy(false);
     }
-};
+  }
+  async function update(slot, values) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await api.put("/admin/slots/" + slot._id, {
+        capacity: slot.capacity,
+        active: slot.active,
+        ...values,
+      });
+      setMessage("Slot updated");
+      resource.reload();
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Daily inventory</p>
+          <h1>Meal slots</h1>
+          <p className="muted">
+            Each day has its own capacity. Times are in India Standard Time.
+          </p>
+        </div>
+        <label>
+          Service date
+          <input
+            type="date"
+            required
+            value={date}
+            onChange={(event) => {
+              if (event.target.value) {
+                setDate(event.target.value);
+                setPage(1);
+              }
+            }}
+          />
+        </label>
+      </div>
+      <form className="card form-grid" onSubmit={submit}>
+        <label>
+          Meal
+          <select name="mealType">
+            {MEALS.map((meal) => (
+              <option key={meal}>{meal}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Floor
+          <select name="floor">
+            <option value="1">Floor 1</option>
+            <option value="2">Floor 2</option>
+          </select>
+        </label>
+        <label>
+          Start
+          <input type="time" name="startTime" required />
+        </label>
+        <label>
+          End
+          <input type="time" name="endTime" required />
+        </label>
+        <label>
+          Capacity
+          <input
+            type="number"
+            name="capacity"
+            min="1"
+            max="10000"
+            step="1"
+            required
+          />
+        </label>
+        <button className="primary" disabled={busy || date < campusDate()}>
+          Create slot
+        </button>
+      </form>
+      {message && (
+        <p className="notice success" role="status">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      <ResourceState {...resource} empty={!resource.data?.items.length} />
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Meal</th>
+              <th>Floor</th>
+              <th>Time</th>
+              <th>Reserved</th>
+              <th>Capacity</th>
+              <th>Availability</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resource.data?.items.map((slot) => (
+              <tr key={slot._id}>
+                <td className="capitalize">{slot.mealType}</td>
+                <td>{slot.floor}</td>
+                <td>
+                  {slot.startTime} – {slot.endTime}
+                </td>
+                <td>{slot.bookedCount}</td>
+                <td>
+                  <form
+                    className="inline-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      update(slot, {
+                        capacity: Number(
+                          new FormData(event.currentTarget).get("capacity"),
+                        ),
+                      });
+                    }}
+                  >
+                    <input
+                      aria-label={
+                        "Capacity for " +
+                        slot.mealType +
+                        " " +
+                        slot.startTime +
+                        " floor " +
+                        slot.floor
+                      }
+                      type="number"
+                      min={Math.max(1, slot.bookedCount)}
+                      max="10000"
+                      name="capacity"
+                      defaultValue={slot.capacity}
+                      key={slot.capacity}
+                      required
+                    />
+                    <button disabled={busy}>Save</button>
+                  </form>
+                </td>
+                <td>
+                  <button
+                    disabled={busy || (slot.active && slot.bookedCount > 0)}
+                    onClick={() => update(slot, { active: !slot.active })}
+                  >
+                    {slot.active ? "Close slot" : "Reopen slot"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted small">
+        Reserved slots cannot be closed. Existing bookings retain their original
+        time.
+      </p>
+      <Pagination data={resource.data} page={page} setPage={setPage} />
+    </>
+  );
+}

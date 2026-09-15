@@ -1,34 +1,22 @@
-require("dotenv").config({ path: __dirname + "/../.env" });
-const mongoose = require("mongoose");
+const { password, check } = require("../lib/domain");
 const Student = require("../models/Student");
-
-async function seedDemo() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("Connected to MongoDB");
-
-    const existingDemo = await Student.findOne({ rollNo: "DEMO123" });
-    if (existingDemo) {
-      console.log("Demo student already exists. Resetting password...");
-      existingDemo.password = "password123";
-      await existingDemo.save();
-      console.log("Password reset for Demo student.");
-    } else {
-      const demoStudent = new Student({
-        rollNo: "DEMO123",
-        name: "Demo Student",
-        hostel: "Recruiter Hostel",
-        floor: 1,
-        password: "password123"
-      });
-      await demoStudent.save();
-      console.log("Created DEMO123 student successfully.");
-    }
-  } catch (error) {
-    console.error("Error seeding demo:", error);
-  } finally {
-    mongoose.connection.close();
+require("./runScript")(async () => {
+  check(
+    process.env.NODE_ENV !== "production" &&
+      process.env.ALLOW_DEMO_SEED === "true",
+    "Demo seed requires a non-production environment and ALLOW_DEMO_SEED=true",
+  );
+  const secret = password(process.env.DEMO_STUDENT_PASSWORD);
+  if (await Student.exists({ rollNo: "DEMO123" })) {
+    console.log("Demo account already exists; no changes made");
+    return;
   }
-}
-
-seedDemo();
+  await Student.create({
+    rollNo: "DEMO123",
+    name: "Demo Student",
+    hostel: "Demo Hostel",
+    floor: 1,
+    password: secret,
+  });
+  console.log("Demo student created");
+});

@@ -1,23 +1,11 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
+const { text, password, check } = require("./lib/domain");
 const Admin = require("./models/Admin");
-
-mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
-    const admin = await Admin.findOne({ username: "admin" });
-
-    if (!admin) {
-      console.log("Admin not found");
-      process.exit();
-    }
-
-    admin.password = "admin123"; // plain password
-    await admin.save(); // triggers hashing middleware
-
-    console.log("✅ Admin password reset to: admin123");
-    process.exit();
-  })
-  .catch(err => {
-    console.error(err);
-    process.exit(1);
-  });
+require("./scripts/runScript")(async () => {
+  const username = text(process.env.ADMIN_USERNAME, "ADMIN_USERNAME");
+  const secret = password(process.env.ADMIN_PASSWORD);
+  const admin = await Admin.findOne({ username }).select("+password");
+  check(admin, "Administrator not found", 404);
+  admin.password = secret;
+  await admin.save();
+  console.log("Administrator password updated; existing sessions revoked");
+});

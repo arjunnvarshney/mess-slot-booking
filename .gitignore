@@ -22,3 +22,7 @@ Thumbs.db
 # Hosting folders
 .vercel
 .render
+
+# Local test downloads/cache
+.npm-cache/
+.test-artifacts/
