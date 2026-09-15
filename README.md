@@ -1,23 +1,38 @@
 # Campus Mess Booking
 
 ![Campus Mess Booking](https://img.shields.io/badge/Bennett%20University-campus%20dining-0f766e)
-![Node.js](https://img.shields.io/badge/Node.js-22%2B-16a34a)
+![Node.js](https://img.shields.io/badge/Node.js-22.12%2B-16a34a)
 ![React](https://img.shields.io/badge/React-19-149eca)
 ![MongoDB](https://img.shields.io/badge/MongoDB-replica%20set-47a248)
 
-A production-minded meal reservation system for Bennett University. Students reserve a dated meal slot and receive a recoverable QR pass; mess staff manage capacity and scan entry; administrators manage enrollment and reporting.
+**Reserve a meal. Choose a slot. Show your entry pass.**
 
-The application is designed around the rules that matter at a busy mess: one active reservation per meal, no overbooking under concurrent requests, India Standard Time cutoffs, and auditable changes.
+A full-stack campus dining application built for Bennett University. Students book meals for their assigned dining floor, manage reservations, and present a QR pass at the gate. Administrators manage students, daily capacity, entry verification, and dining reports from one dashboard.
+
+The booking service uses database transactions and unique constraints to protect capacity when students reserve the same slot simultaneously. Meal dates, booking cutoffs, and entry windows follow India Standard Time.
+
+[Get started](#local-setup) · [Features](#what-it-includes) · [Architecture](#architecture) · [API](#api-overview) · [Deployment](#production-rollout)
 
 ## What it includes
 
-- Student booking for breakfast, lunch, snacks, and dinner with floor-aware availability.
-- Recoverable QR passes with owner-only access and one-time gate redemption.
-- Cancellation and atomic rescheduling before the 15-minute cutoff.
-- Admin enrollment, bulk import, floor/access management, dated slot inventory, and CSV reports.
-- Daily and seven-day analytics with reservation, consumption, and unique-student totals.
-- Responsive student and admin interfaces, dark mode, loading/retry states, and mobile-friendly navigation.
-- Transactional MongoDB services, versioned JWT sessions, password hashing, request validation, rate limits, audit logs, and safe error responses.
+| For students                                    | For administrators                                       |
+| ----------------------------------------------- | -------------------------------------------------------- |
+| Book breakfast, lunch, snacks, and dinner       | Enroll students individually or import up to 100 at once |
+| View available slots for the assigned floor     | Create dated slots and manage capacity                   |
+| Cancel or reschedule before the cutoff          | Manage floor assignments and account access              |
+| Reopen an existing QR entry pass                | Scan passes with a camera or enter a code manually       |
+| Browse paginated booking history                | Review daily and seven-day analytics                     |
+| Change passwords and choose session persistence | Reset student passwords and export dated CSV reports     |
+
+Both interfaces include responsive layouts, dark mode, loading indicators, and retry controls. Routes for analytics and scanning load separately to reduce the initial JavaScript download.
+
+### A typical meal booking
+
+1. An administrator enrolls a student and creates slots for upcoming service dates.
+2. The student signs in and selects a meal and an eligible slot for today.
+3. The API reserves capacity and creates the booking in one transaction.
+4. The student opens the QR pass and presents it during the reserved time window.
+5. An authenticated administrator scans the pass; the system records consumption, the operator, and the timestamp.
 
 ## Quick links
 
@@ -27,6 +42,20 @@ The application is designed around the rules that matter at a busy mess: one act
 - [API overview](#api-overview)
 - [Testing](#testing)
 - [Production rollout](#production-rollout)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+
+## Technology stack
+
+| Layer                    | Technologies                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| Interface                | React 19, React Router, CSS                                                  |
+| Development and bundling | Vite with the Rolldown implementation                                        |
+| Charts and QR scanning   | Recharts, html5-qrcode                                                       |
+| API                      | Node.js, Express 5                                                           |
+| Database                 | MongoDB replica set or Atlas, Mongoose                                       |
+| Authentication           | JWT, bcrypt password hashing                                                 |
+| Verification             | Node.js test runner, mongodb-memory-server, ESLint, Prettier, GitHub Actions |
 
 ## Project layout
 
@@ -63,12 +92,71 @@ Node.js 22.12+ and MongoDB Atlas or a MongoDB replica set. Standalone MongoDB is
 
 ## Local setup
 
-1. Run `npm ci --prefix backend` and `npm ci --prefix frontend`.
-2. Copy `backend/.env.example` to `backend/.env`; set your MongoDB URI and a random JWT secret of at least 32 characters. Generate a secret with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
-3. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in that local environment, then run `node backend/createAdmin.js`. Passwords must contain at least 12 characters and at most 72 UTF-8 bytes. Existing administrators are left untouched.
-4. Run `npm run seed:slots --prefix backend` to create seven days of default slots. To choose dates: `npm run seed:slots --prefix backend -- 2026-09-14 7`. Re-running preserves existing slots and reservations.
-5. Run `npm run dev --prefix backend` and `npm run dev --prefix frontend` in separate terminals.
-6. Open the frontend URL printed by Vite. The default local API proxy points to localhost:5000. Sign in as admin to enroll students.
+### 1. Clone and install
+
+```sh
+git clone https://github.com/arjunnvarshney/mess-slot-booking.git
+cd mess-slot-booking
+npm ci --prefix backend
+npm ci --prefix frontend
+```
+
+Run the remaining commands from the repository root. If you already have a checkout, use that folder instead of cloning again.
+
+### 2. Configure the API
+
+Copy `backend/.env.example` to `backend/.env` using your editor or file manager. Set `MONGO_URI` to your Atlas connection string or a configured local replica set. Set `JWT_SECRET` to a random value of at least 32 characters; generate one with:
+
+```sh
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+The example MongoDB URI assumes a replica set named `rs0` already exists. Copying it does not create a database server or configure replication.
+
+### 3. Create the first administrator
+
+Add `ADMIN_USERNAME` and `ADMIN_PASSWORD` to `backend/.env`, then run:
+
+```sh
+node backend/createAdmin.js
+```
+
+Passwords must contain at least 12 characters and at most 72 UTF-8 bytes. The script leaves existing administrators untouched. Remove the provisioning password from the environment file after account creation.
+
+### 4. Create meal slots
+
+```sh
+npm run seed:slots --prefix backend
+```
+
+This creates seven days of dated slots beginning today. Re-running preserves existing capacities and reservations. Optional arguments accept a current or future `YYYY-MM-DD` start date followed by a day count from 1 to 31.
+
+The default seed creates 15-minute slots on floors 1 and 2 with capacity 120 per slot:
+
+| Meal      | Service window (IST) |
+| --------- | -------------------- |
+| Breakfast | 07:30–09:30          |
+| Lunch     | 12:00–15:00          |
+| Snacks    | 17:00–18:00          |
+| Dinner    | 20:00–22:00          |
+
+These are application defaults; review them against your mess schedule before use.
+
+### 5. Start the application
+
+In one terminal:
+
+```sh
+npm run dev --prefix backend
+```
+
+In another terminal:
+
+```sh
+npm run dev --prefix frontend
+```
+
+Open the URL printed by Vite, normally `http://localhost:5173`. The local `/api` proxy targets port `5000`. Choose **Administrator sign in**, enroll a student, then use that student's account to try a booking. Database readiness is available at `http://localhost:5000/health`.
 
 The student email local part maps to an administrator-enrolled roll number. This is **not university SSO or proof of email ownership**. Public student signup is disabled.
 
@@ -76,10 +164,18 @@ No fixed demo password is shipped. Optional demo enrollment requires a separate 
 
 ## Configuration
 
-Copy the example files before starting:
+| Variable                           | Location                | Purpose                                                              |
+| ---------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `MONGO_URI`                        | Backend                 | Atlas or replica-set connection string                               |
+| `JWT_SECRET`                       | Backend                 | Random signing secret, at least 32 characters                        |
+| `PORT`                             | Backend                 | API port; defaults to `5000`                                         |
+| `CORS_ORIGINS`                     | Backend                 | Comma-separated exact frontend origins                               |
+| `NODE_ENV`                         | Backend                 | Set to `production` for deployment                                   |
+| `TRUST_PROXY_HOPS`                 | Backend                 | Optional number of trusted reverse proxy hops                        |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Backend scripts         | Administrator provisioning or password reset                         |
+| `VITE_API_URL`                     | Frontend, at build time | Optional separate API URL ending in `/api`; otherwise `/api` is used |
 
-- [`backend/.env.example`](backend/.env.example) — MongoDB, JWT, CORS, and provisioning settings.
-- [`frontend/.env.example`](frontend/.env.example) — optional `VITE_API_URL` for a separately hosted API.
+See [`backend/.env.example`](backend/.env.example) and [`frontend/.env.example`](frontend/.env.example) for templates. The frontend example is optional for local development with the default proxy.
 
 Keep secrets in the server environment. Never put database credentials or `JWT_SECRET` in a `VITE_` variable or commit a `.env` file.
 
@@ -147,11 +243,22 @@ Backend tests start and stop their own temporary MongoDB replica set. They never
 
 CI runs these checks on every push and pull request. Recheck dependency advisories with `npm audit` in both supported packages.
 
-The integration suite starts an isolated MongoDB replica set, exercises concurrent booking and scanning, and shuts it down automatically. It does not connect to your configured database.
-
 ## Production rollout
 
-For a new deployment, build `frontend/dist`, serve `index.html` for client routes, and proxy `/api` and `/health` to the API. Set `NODE_ENV=production`, exact `CORS_ORIGINS`, a random `JWT_SECRET` of at least 32 characters, and an Atlas or replica-set MongoDB URI. Use HTTPS, backups, monitoring, and a shared rate limiter before running multiple API instances.
+1. Configure the backend's production environment using the variables above.
+2. Install dependencies and build the frontend:
+
+   ```sh
+   npm ci --prefix backend
+   npm ci --prefix frontend
+   npm run build --prefix frontend
+   ```
+
+3. Serve `frontend/dist` as a static site, with `index.html` as the fallback for client routes.
+4. Start the API with `npm start --prefix backend` and proxy `/api` and `/health` to it. For separate API hosting, set `VITE_API_URL` before building the frontend.
+5. Provision accounts and dated slots, then verify login, booking, cancellation, reporting, and camera scanning over HTTPS.
+
+For an existing installation, follow the migration checklist below before switching traffic.
 
 ## Existing installations: read before rollout
 
@@ -172,3 +279,31 @@ Set `NODE_ENV=production`, `CORS_ORIGINS` to exact permitted frontend origins, a
 The built-in login/scan throttling is process-local. Use a shared limiter or edge rate limiting before scaling to multiple API instances. Store secrets in the hosting secret manager, restrict database network access, monitor readiness and request IDs, and configure regular backups with periodic restore drills. Re-run slot seeding on a schedule or create upcoming slots through the admin UI.
 
 The backend handles SIGTERM/SIGINT with graceful HTTP/database shutdown. The frontend retries failed reads on request and refreshes current booking/analytics data every 30 seconds.
+
+## Troubleshooting
+
+| Symptom                             | What to check                                                                                                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| API rejects the MongoDB connection  | Use Atlas or a running replica set; standalone MongoDB cannot run booking transactions.                                              |
+| No meal slots appear                | Seed dates including today, check the student's floor, and confirm the booking cutoff has not passed.                                |
+| Student cannot sign in              | Confirm an administrator enrolled the roll number and assigned a password. Email entry does not authenticate through university SSO. |
+| Frontend cannot reach the API       | Check the API port, `/health`, the Vite proxy, and exact `CORS_ORIGINS`. Rebuild after changing `VITE_API_URL`.                      |
+| Camera scanner will not start       | Use HTTPS or localhost, allow camera access, and check whether another app is using the camera. Manual code entry is available.      |
+| Entry pass is rejected              | Confirm today's date, an unused active booking, and that the current time is within the reserved slot.                               |
+| First test run cannot start MongoDB | Allow the test dependency to download its MongoDB binary; subsequent runs use the cached binary.                                     |
+
+## Current limitations and next steps
+
+The application currently has student and administrator roles. A dedicated gate-operator role, university SSO, automated recurring slot generation, meal reminders, and waitlists are potential extensions; they are not implemented features.
+
+Login and scan rate limits are stored per API process. Multiple instances need shared or edge rate limiting. Browser sessions use bearer tokens in browser storage, and physical camera behavior needs testing on the devices used at the gate.
+
+## Contributing
+
+1. Create a branch for a focused change.
+2. Follow the route/service/model separation and existing UI components.
+3. Add regression tests for changes to booking capacity, authorization, dates, or QR redemption.
+4. Run the commands in [Testing](#testing) before opening a pull request.
+5. Describe the user-visible behavior, verification, and any migration requirements.
+
+Use synthetic student data in examples and tests. Keep credentials and personal student information out of commits, screenshots, and issue reports.
