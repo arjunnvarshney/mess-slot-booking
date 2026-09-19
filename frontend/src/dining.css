@@ -1,0 +1,332 @@
+.student-shell {
+  background: var(--bg);
+}
+.student-header {
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.student-header .brand-mark {
+  background: #e9b44c;
+  color: #142b49;
+  font-family: Manrope, sans-serif;
+}
+.student-main {
+  max-width: 1280px;
+  margin: auto;
+  padding-bottom: 100px;
+}
+.student-main > .page-heading {
+  margin-bottom: 28px;
+}
+.student-main .section-gap {
+  margin-top: 44px;
+}
+.dining-hero {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 24px;
+  padding: 42px;
+  background: radial-gradient(ellipse at top right, #355881, #142b49 65%);
+  border-radius: 24px;
+  color: #fff;
+  overflow: hidden;
+}
+.hero-kicker {
+  display: block;
+  color: #f1c979;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+.dining-hero h2 {
+  font-size: clamp(28px, 3vw, 40px);
+  max-width: 480px;
+  line-height: 1.18;
+}
+.dining-hero p {
+  color: #d2deee;
+  max-width: 460px;
+  margin-bottom: 24px;
+}
+.hero-ticket {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.hero-ticket span {
+  padding: 8px 12px;
+  border: 1px solid #56718e;
+  border-radius: 8px;
+}
+.gold-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  background: #e9b44c;
+  border: 1px solid #e9b44c;
+  color: #142b49;
+  font-weight: 700;
+  padding: 14px 20px;
+  min-height: 48px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.gold-button:hover:not(:disabled) {
+  background: #f5c96e;
+  color: #142b49;
+  border-color: #f5c96e;
+}
+.hero-emblem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.plate {
+  border: 1px solid #8594a7;
+  outline: 1px solid #405b7c;
+  outline-offset: 12px;
+  border-radius: 50%;
+  width: 190px;
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  box-shadow: inset 0 0 0 18px #ffffff06;
+}
+.plate span {
+  font:
+    700 76px Manrope,
+    sans-serif;
+  color: #e9b44c;
+}
+.plate small {
+  letter-spacing: 0.2em;
+  font-size: 9px;
+}
+.plate-caption {
+  font-size: 12px;
+  margin-top: 12px;
+  color: #c4d1e3;
+}
+.student-nav {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+  padding: 6px;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.student-nav a {
+  text-decoration: none;
+  color: var(--text);
+  padding: 10px 22px;
+  font-weight: 600;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.student-nav a:hover {
+  background: var(--soft);
+}
+.announcement {
+  border-left: 4px solid #e9b44c;
+  background: var(--card);
+  padding: 20px 24px;
+  margin-top: 22px;
+  border-radius: 0 12px 12px 0;
+}
+.announcement p {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.day-selector {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.day-selector button {
+  min-width: 0;
+  padding: 12px 5px;
+}
+.day-selector small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 5px;
+}
+.day-selector [aria-pressed="true"] {
+  background: #142b49;
+  color: #fff;
+  border-color: #142b49;
+  box-shadow: inset 0 -3px #e9b44c;
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.menu-card {
+  position: relative;
+  overflow: hidden;
+  border-top: 3px solid #e9b44c;
+}
+.menu-card h3 {
+  margin-top: 8px;
+}
+.menu-number {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+}
+.menu-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.menu-card li {
+  font-size: 14px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.sample-note,
+.published-note {
+  font-size: 13px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--text);
+}
+.sample-note {
+  border-left: 3px solid #e9b44c;
+}
+.menu-section > .small {
+  margin-top: 16px;
+}
+.menu-grid textarea {
+  text-transform: none;
+  font-weight: 400;
+  resize: vertical;
+}
+.login-story {
+  background:
+    linear-gradient(145deg, #142b49e8, #142b49ee),
+    url("/bennett-bg.jpg") center/cover;
+}
+.login-story .brand-mark {
+  background: #e9b44c;
+  color: #142b49;
+}
+.login-story .eyebrow {
+  color: #f1c979;
+}
+.login-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid #ffffff30;
+  font-size: 12px;
+  color: #d2deee;
+}
+button,
+a.gold-button {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+button,
+.student-nav a {
+  min-height: 44px;
+}
+input,
+.hero-ticket,
+.badge {
+  font-variant-numeric: tabular-nums;
+}
+section[id] {
+  scroll-margin-top: 24px;
+}
+@media (max-width: 1000px) {
+  .menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .dining-hero {
+    grid-template-columns: 1fr;
+    padding: 28px 24px;
+    border-radius: 18px;
+  }
+  .hero-emblem {
+    display: none;
+  }
+  .student-header {
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .student-header .actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .student-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    z-index: 20;
+    border-radius: 16px 16px 0 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -6px 24px #142b490d;
+  }
+  .student-nav a {
+    padding: 14px 2px;
+    text-align: center;
+    font-size: 13px;
+  }
+  .student-main {
+    padding-bottom: 110px;
+  }
+  .day-selector {
+    gap: 4px;
+  }
+  .day-selector button {
+    font-size: 12px;
+  }
+  .menu-grid {
+    gap: 10px;
+  }
+  .menu-card {
+    padding: 16px;
+  }
+  .menu-card h3 {
+    font-size: 17px;
+  }
+  .mobile-toggle {
+    background: #294c78;
+  }
+}
+@media (max-width: 360px) {
+  .menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a.gold-button {
+    transition: none;
+  }
+}

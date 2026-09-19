@@ -1,26 +1,26 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
 :root {
   font-family: "DM Sans", system-ui, sans-serif;
-  color: #172b2a;
-  background: #f4f6f3;
+  color: #142b49;
+  background: #f7f8fa;
   font-synthesis: none;
-  --bg: #f4f6f3;
+  --bg: #f7f8fa;
   --card: #fff;
-  --text: #172b2a;
-  --muted: #526765;
-  --line: #dce5df;
-  --accent: #0f766e;
-  --soft: #e5f2eb;
+  --text: #142b49;
+  --muted: #58677b;
+  --line: #dce2eb;
+  --accent: #294c78;
+  --soft: #eaf0f8;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #101d20;
-  --card: #192b2e;
-  --text: #edf5ef;
-  --muted: #acc1bd;
-  --line: #34494b;
-  --accent: #69d2b6;
-  --soft: #223c38;
+  --bg: #0d1727;
+  --card: #17253a;
+  --text: #edf2fa;
+  --muted: #afbed2;
+  --line: #34465f;
+  --accent: #e9b44c;
+  --soft: #23344d;
   color: var(--text);
   background: var(--bg);
 }
@@ -83,12 +83,12 @@ button:disabled {
   cursor: not-allowed;
 }
 button.primary {
-  background: #0f766e;
-  border-color: #0f766e;
+  background: #244970;
+  border-color: #244970;
   color: #fff;
 }
 button.primary:hover:not(:disabled) {
-  background: #115e59;
+  background: #142b49;
 }
 input,
 select,
@@ -198,7 +198,7 @@ label {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #0f766e;
+  background: #142b49;
   color: #fff;
 }
 .brand small {
@@ -217,7 +217,7 @@ label {
   width: 235px;
   flex-shrink: 0;
   padding: 30px 20px;
-  background: #102e2d;
+  background: #142b49;
   color: #edf5ef;
   display: flex;
   flex-direction: column;
@@ -227,8 +227,8 @@ label {
   height: 100vh;
 }
 .sidebar .brand-mark {
-  background: #a7d9bd;
-  color: #173b30;
+  background: #e9b44c;
+  color: #142b49;
 }
 .nav {
   display: flex;
@@ -238,12 +238,12 @@ label {
 .nav a {
   padding: 13px 15px;
   border-radius: 9px;
-  color: #c4d8d2;
+  color: #c4d1e3;
   text-decoration: none;
   font-size: 14px;
 }
 .nav a.active {
-  background: #24504a;
+  background: #294c78;
   color: #fff;
 }
 .sidebar-actions {
@@ -254,8 +254,8 @@ label {
 }
 .sidebar-actions button {
   background: transparent;
-  color: #c4d8d2;
-  border-color: #345350;
+  color: #c4d1e3;
+  border-color: #415574;
 }
 .main {
   flex: 1;

@@ -8,9 +8,9 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <span className="brand-mark">M</span>
+        <span className="brand-mark">B</span>
         <div>
-          Campus Mess<small>Administration</small>
+          Bennett Dining<small>Administration</small>
         </div>
       </div>
       <button
@@ -31,6 +31,7 @@ export default function Sidebar() {
           ["bookings", "Bookings"],
           ["students", "Students"],
           ["slots", "Meal slots"],
+          ["dining", "Menus & notices"],
           ["scanner", "Gate scanner"],
           ["settings", "Account"],
         ].map(([path, label]) => (

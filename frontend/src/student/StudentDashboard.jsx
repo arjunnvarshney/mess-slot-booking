@@ -15,10 +15,17 @@ import useResource from "../hooks/useResource";
 import ResourceState from "../components/ResourceState";
 import Pagination from "../components/Pagination";
 import QRPass from "../components/QRPass";
+import DiningMenu from "../components/DiningMenu";
+import { nextMeal } from "../services/dining";
 export default function StudentDashboard() {
   const profile = useResource("/students/profile", 60000);
   const slots = useResource("/slots/today", 30000);
   const todayBookings = useResource("/bookings/today", 30000);
+  const dining = useResource("/students/dining?date=" + campusDate(), 30000);
+  const upcoming = nextMeal(todayBookings.data);
+  const announcement = dining.data?.days.find(
+    (day) => day.date === campusDate(),
+  )?.announcement;
   const [page, setPage] = useState(1);
   const history = useResource("/bookings/my?page=" + page, 30000);
   const [busy, setBusy] = useState(false),
@@ -52,7 +59,10 @@ export default function StudentDashboard() {
     <div className="student-shell">
       <header className="student-header">
         <Link className="brand" to="/student/dashboard">
-          <span className="brand-mark">M</span>Campus Mess
+          <span className="brand-mark">B</span>
+          <span>
+            Bennett Dining<small>Made for your campus day</small>
+          </span>
         </Link>
         <div className="actions">
           <button onClick={toggleTheme}>
@@ -65,7 +75,7 @@ export default function StudentDashboard() {
       <main id="main-content" className="student-main">
         <div className="page-heading">
           <div>
-            <p className="eyebrow">Your dining day</p>
+            <p className="eyebrow">Bennett University · Campus dining</p>
             <h1>
               {profile.data ? "Hello, " + profile.data.name : "Your meals"}
             </h1>
@@ -82,7 +92,66 @@ export default function StudentDashboard() {
           )}
         </div>
         <ResourceState {...profile} />
-        <section aria-labelledby="book-title">
+        <section className="dining-hero" aria-labelledby="next-meal-title">
+          <div>
+            <span className="hero-kicker">
+              A little less waiting. A better dining day.
+            </span>
+            <h2 id="next-meal-title">
+              {upcoming ? "Your next meal is sorted." : "Good food. Your time."}
+            </h2>
+            <p>
+              {upcoming
+                ? "Your seat is reserved. Open your pass when you reach the mess."
+                : "Explore the menu, pick a slot, and make time for a proper break."}
+            </p>
+            {upcoming ? (
+              <>
+                <div className="hero-ticket">
+                  <span className="capitalize">{upcoming.mealType}</span>
+                  <span>{upcoming.slotTime}</span>
+                  <span>Floor {upcoming.floor}</span>
+                </div>
+                <button
+                  className="gold-button"
+                  onClick={() => setPass(upcoming)}
+                >
+                  Show entry pass <span aria-hidden="true">↗</span>
+                </button>
+              </>
+            ) : (
+              <a className="gold-button" href="#reserve">
+                Find a meal slot <span aria-hidden="true">↗</span>
+              </a>
+            )}
+            <ResourceState {...todayBookings} />
+          </div>
+          <div className="hero-emblem" aria-hidden="true">
+            <div className="plate">
+              <span>B</span>
+              <small>BENNETT DINING</small>
+            </div>
+            <span className="plate-caption">A seat for every meal.</span>
+          </div>
+        </section>
+        {announcement && (
+          <aside className="announcement">
+            <span className="eyebrow">From the mess team · Today</span>
+            <p>{announcement}</p>
+          </aside>
+        )}
+        <nav className="student-nav" aria-label="Student navigation">
+          <a href="#main-content">Today</a>
+          <a href="#menu">Menu</a>
+          <a href="#bookings">Bookings</a>
+          <Link to="/student/settings">Profile</Link>
+        </nav>
+        <DiningMenu resource={dining} />
+        <section
+          className="section-gap"
+          id="reserve"
+          aria-labelledby="book-title"
+        >
           <h2 id="book-title">Reserve a meal</h2>
           <p className="muted">
             Booking and changes close 15 minutes before a slot starts.
@@ -99,7 +168,13 @@ export default function StudentDashboard() {
               );
               return (
                 <article className="card meal-card" key={meal}>
-                  <span className="eyebrow">Today's menu slot</span>
+                  <span className="eyebrow">
+                    {alreadyBooked
+                      ? "Your seat is reserved"
+                      : options.length
+                        ? "Open for booking"
+                        : "Booking closed"}
+                  </span>
                   <h3 className="capitalize">{meal}</h3>
                   <p className="muted">
                     {options.length
@@ -155,7 +230,11 @@ export default function StudentDashboard() {
             {error}
           </p>
         )}
-        <section className="section-gap" aria-labelledby="history-title">
+        <section
+          className="section-gap"
+          id="bookings"
+          aria-labelledby="history-title"
+        >
           <div className="page-heading">
             <h2 id="history-title">Your bookings</h2>
             <button onClick={history.reload}>Refresh</button>

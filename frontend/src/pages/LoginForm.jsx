@@ -47,13 +47,25 @@ export default function LoginForm({ role }) {
     <main id="main-content" className="login-page">
       <section className="login-story">
         <div className="brand">
-          <span className="brand-mark">M</span>Campus Mess
+          <span className="brand-mark">B</span>Bennett Dining
         </div>
-        <h1>A seat for every meal.</h1>
+        <h1>
+          Your campus.
+          <br />
+          Your table.
+          <br />
+          Your time.
+        </h1>
         <p>
-          Plan your day, reserve your meal, and walk in with your entry pass.
+          Good meals belong in a busy day. Discover the menu, reserve your seat,
+          and arrive with your entry pass ready.
         </p>
         <span className="eyebrow">Bennett University · Campus dining</span>
+        <div className="login-steps">
+          <span>01 · Explore the menu</span>
+          <span>02 · Choose your time</span>
+          <span>03 · Scan & enjoy</span>
+        </div>
       </section>
       <section className="login-panel">
         <img

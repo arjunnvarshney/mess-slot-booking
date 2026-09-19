@@ -1,6 +1,6 @@
-# Campus Mess Booking
+# Bennett Dining
 
-![Campus Mess Booking](https://img.shields.io/badge/Bennett%20University-campus%20dining-0f766e)
+![Bennett Dining](https://img.shields.io/badge/Bennett%20University-campus%20dining-142b49)
 ![Node.js](https://img.shields.io/badge/Node.js-22.12%2B-16a34a)
 ![React](https://img.shields.io/badge/React-19-149eca)
 ![MongoDB](https://img.shields.io/badge/MongoDB-replica%20set-47a248)
@@ -12,6 +12,14 @@ A full-stack campus dining application built for Bennett University. Students bo
 The booking service uses database transactions and unique constraints to protect capacity when students reserve the same slot simultaneously. Meal dates, booking cutoffs, and entry windows follow India Standard Time.
 
 [Get started](#local-setup) · [Features](#what-it-includes) · [Architecture](#architecture) · [API](#api-overview) · [Deployment](#production-rollout)
+
+## Dining experience
+
+The interface uses a navy-and-gold theme with Manrope headings and DM Sans text. The student dashboard puts the next available entry pass first, followed by a seven-day menu, reservations, and booking history. Mobile navigation links to Today, Menu, Bookings, and Profile.
+
+**Sample menus are included.** Dates without a published menu show clearly labelled illustrative dishes; these are not the confirmed Bennett University mess menu. Administrators can open **Menus & notices** to publish all four meals and an optional announcement for a service date. Announcements appear only on that date. Publishing a menu does not create or change reservable slots.
+
+The new authenticated endpoints are `GET /api/students/dining?date=YYYY-MM-DD`, `GET /api/admin/dining?date=YYYY-MM-DD` (seven days from the date), and `PUT /api/admin/dining/:date`. Updates accept `meals: [{ mealType, dishes }]` for all four meals and an `announcement` string. Published menus are persisted in MongoDB; sample menus are display-only and never seeded into the database.
 
 ## What it includes
 

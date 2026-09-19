@@ -9,6 +9,7 @@ const Student = require("../models/Student");
 const MealSlot = require("../models/MealSlot");
 const Booking = require("../models/Booking");
 const AuditLog = require("../models/AuditLog");
+const DiningDay = require("../models/DiningDay");
 const { instant, today } = require("../lib/domain");
 const service = require("../services/bookingService");
 const reports = require("../services/reportService");
@@ -63,14 +64,14 @@ before(async () => {
   await mongoose.connect(repl.getUri("mess_booking_tests"), {
     autoIndex: false,
   });
-  for (const Model of [Admin, Student, MealSlot, Booking, AuditLog])
+  for (const Model of [Admin, Student, MealSlot, Booking, AuditLog, DiningDay])
     await Model.createIndexes();
   server = require("../app")().listen(0, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
   base = "http://127.0.0.1:" + server.address().port + "/api";
 });
 beforeEach(async () => {
-  for (const Model of [Booking, MealSlot, Student, Admin, AuditLog])
+  for (const Model of [Booking, MealSlot, Student, Admin, AuditLog, DiningDay])
     await Model.deleteMany({});
   admin = await Admin.create({ username: "operator", password: credential });
   student = await Student.create({
@@ -91,6 +92,104 @@ after(async () => {
     });
   await mongoose.disconnect();
   if (repl) await repl.stop();
+});
+test("dated menus require admin publishing and are visible to enrolled students", async () => {
+  const body = {
+    meals: ["breakfast", "lunch", "snacks", "dinner"].map((mealType) => ({
+      mealType,
+      dishes: ["Rice", "Dal"],
+    })),
+    announcement: "Use the east entrance today.",
+  };
+  assert.equal((await request("/students/dining")).status, 401);
+  assert.equal(
+    (
+      await request("/admin/dining/" + today(), {
+        method: "PUT",
+        body,
+        auth: studentToken,
+      })
+    ).status,
+    401,
+  );
+  assert.equal(
+    (
+      await request("/admin/dining/" + today(), {
+        method: "PUT",
+        body,
+        auth: adminToken,
+      })
+    ).status,
+    200,
+  );
+  const result = await request("/students/dining", { auth: studentToken });
+  assert.equal(result.data.days[0].announcement, body.announcement);
+  assert.equal(result.data.days[0].meals.length, 4);
+  assert.equal(result.data.days[0].updatedBy, undefined);
+  assert.equal(
+    (
+      await request("/admin/dining/" + today(), {
+        method: "PUT",
+        body: {
+          ...body,
+          announcement: "",
+          meals: body.meals.map((meal) => ({ ...meal, dishes: ["Roti"] })),
+        },
+        auth: adminToken,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(await DiningDay.countDocuments(), 1);
+  assert.equal(
+    (await request("/students/dining", { auth: studentToken })).data.days[0]
+      .announcement,
+    "",
+  );
+});
+test("menu validation rejects duplicates, oversized fields and invalid dates without saving", async () => {
+  const body = {
+    meals: ["breakfast", "lunch", "snacks", "dinner"].map((mealType) => ({
+      mealType,
+      dishes: ["Rice"],
+    })),
+    announcement: "",
+  };
+  for (const invalid of [
+    { ...body, meals: [body.meals[0], body.meals[0], ...body.meals.slice(2)] },
+    { ...body, announcement: "x".repeat(501) },
+    { ...body, meals: body.meals.map((meal) => ({ ...meal, dishes: [] })) },
+    {
+      ...body,
+      meals: body.meals.map((meal) => ({ ...meal, dishes: ["x".repeat(81)] })),
+    },
+  ])
+    assert.equal(
+      (
+        await request("/admin/dining/" + today(), {
+          method: "PUT",
+          body: invalid,
+          auth: adminToken,
+        })
+      ).status,
+      400,
+    );
+  assert.equal(
+    (
+      await request("/admin/dining/2000-01-01", {
+        method: "PUT",
+        body,
+        auth: adminToken,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await request("/students/dining?date=2026-02-30", { auth: studentToken }))
+      .status,
+    400,
+  );
+  assert.equal(await DiningDay.countDocuments(), 0);
 });
 test("admin creation and scan require admin authentication; public enrollment is gone", async () => {
   assert.equal(

@@ -13,6 +13,7 @@ const AdminStudents = lazy(() => import("./pages/AdminStudents"));
 const ManageSlots = lazy(() => import("./pages/ManageSlots"));
 const QRScanner = lazy(() => import("./pages/QRScanner"));
 const Settings = lazy(() => import("./pages/Settings"));
+const ManageDining = lazy(() => import("./pages/ManageDining"));
 export default function App() {
   return (
     <ErrorBoundary>
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="bookings" element={<AdminBookings />} />
               <Route path="students" element={<AdminStudents />} />
               <Route path="slots" element={<ManageSlots />} />
+              <Route path="dining" element={<ManageDining />} />
               <Route path="scanner" element={<QRScanner />} />
               <Route path="settings" element={<Settings role="admin" />} />
             </Route>

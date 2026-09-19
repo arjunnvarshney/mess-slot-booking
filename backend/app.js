@@ -45,6 +45,14 @@ function createApp() {
       .status(mongoose.connection.readyState === 1 ? 200 : 503)
       .json({ ready: mongoose.connection.readyState === 1 }),
   );
+  app.use(
+    "/api/admin",
+    require("./routes/diningRoutes")(require("./middleware/adminAuth"), true),
+  );
+  app.use(
+    "/api/students",
+    require("./routes/diningRoutes")(require("./middleware/studentAuth")),
+  );
   app.use("/api/admin", require("./routes/adminRoutes"));
   app.use("/api/admin", require("./routes/adminStudentRoutes"));
   app.use("/api/admin", require("./routes/adminSlotRoutes"));
