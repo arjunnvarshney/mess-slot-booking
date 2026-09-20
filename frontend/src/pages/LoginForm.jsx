@@ -128,6 +128,18 @@ export default function LoginForm({ role }) {
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <div className="demo-invite">
+          <p>
+            <strong>Just looking around?</strong>
+          </p>
+          <p className="muted small">
+            Explore menus, sample bookings, and an entry-pass preview. No
+            account needed.
+          </p>
+          <Link className="gold-button" to="/demo">
+            Try student demo <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
         <p className="muted small">
           Need an account or password reset? Contact the mess administrator.
         </p>

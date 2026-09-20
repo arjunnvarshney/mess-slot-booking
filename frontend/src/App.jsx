@@ -14,6 +14,7 @@ const ManageSlots = lazy(() => import("./pages/ManageSlots"));
 const QRScanner = lazy(() => import("./pages/QRScanner"));
 const Settings = lazy(() => import("./pages/Settings"));
 const ManageDining = lazy(() => import("./pages/ManageDining"));
+const DemoDashboard = lazy(() => import("./pages/DemoDashboard"));
 export default function App() {
   return (
     <ErrorBoundary>
@@ -30,6 +31,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<UnifiedLogin />} />
           <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/demo" element={<DemoDashboard />} />
           <Route element={<StudentRoute />}>
             <Route path="/student/dashboard" element={<StudentDashboard />} />
             <Route
