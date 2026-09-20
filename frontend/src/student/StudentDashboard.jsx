@@ -16,6 +16,7 @@ import ResourceState from "../components/ResourceState";
 import Pagination from "../components/Pagination";
 import QRPass from "../components/QRPass";
 import DiningMenu from "../components/DiningMenu";
+import DiningIllustration from "../components/DiningIllustration";
 import { nextMeal } from "../services/dining";
 export default function StudentDashboard() {
   const profile = useResource("/students/profile", 60000);
@@ -126,13 +127,7 @@ export default function StudentDashboard() {
             )}
             <ResourceState {...todayBookings} />
           </div>
-          <div className="hero-emblem" aria-hidden="true">
-            <div className="plate">
-              <span>B</span>
-              <small>BENNETT DINING</small>
-            </div>
-            <span className="plate-caption">A seat for every meal.</span>
-          </div>
+          <DiningIllustration />
         </section>
         {announcement && (
           <aside className="announcement">

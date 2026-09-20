@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext } from "../context/theme";
 import DiningMenu from "../components/DiningMenu";
+import DiningIllustration from "../components/DiningIllustration";
 import { MEALS, campusDate, displayDate } from "../services/utils";
 
 const times = {
@@ -143,13 +144,7 @@ export default function DemoDashboard() {
               </a>
             )}
           </div>
-          <div className="hero-emblem" aria-hidden="true">
-            <div className="plate">
-              <span>B</span>
-              <small>BENNETT DINING</small>
-            </div>
-            <span className="plate-caption">A seat for every meal.</span>
-          </div>
+          <DiningIllustration />
         </section>
         <nav className="student-nav" aria-label="Demo navigation">
           <a href="#main-content">Today</a>
